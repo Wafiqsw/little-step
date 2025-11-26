@@ -5,41 +5,31 @@
  * @format
  */
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
 import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
+  SafeAreaProvider
 } from 'react-native-safe-area-context';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import MainNavigator from './src/navigation/MainNavigator';
+
+const AppTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: '#FFFFFF',
+  },
+};
 
 function App() {
-  const isDarkMode = useColorScheme() === 'dark';
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
+      <NavigationContainer theme={AppTheme}>
+        <MainNavigator />
+      </NavigationContainer>
     </SafeAreaProvider>
   );
 }
 
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
 
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
 
 export default App;
