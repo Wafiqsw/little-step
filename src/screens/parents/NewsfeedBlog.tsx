@@ -1,18 +1,26 @@
 import { View, Text, StyleSheet, ScrollView, TextInput } from 'react-native'
 import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Header, Button, QuestionCard } from '../components'
-import { Colors, Typography, Spacing, BorderRadius } from '../constants'
+import { Header, Button, QuestionCard } from '../../components'
+import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
 import Icon from 'react-native-vector-icons/FontAwesome'
-import { mockNewsData, getNewsById } from '../data/MockNews'
+import { mockNewsData, getNewsById } from '../../data/MockNews'
 import { RouteProp, useRoute } from '@react-navigation/native'
-import { MainNavigatorParamList } from '../navigation/type'
+import { MainNavigatorParamList } from '../../navigation/type'
+import { useNavigation } from '@react-navigation/native'
+import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
+type NewsfeedBlogNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'NewsfeedBlog'>
 type NewsfeedBlogRouteProp = RouteProp<MainNavigatorParamList, 'NewsfeedBlog'>
 
 const NewsfeedBlog = () => {
   const route = useRoute<NewsfeedBlogRouteProp>()
   const newsId = route.params?.newsId
+  const navigation = useNavigation<NewsfeedBlogNavigationProp>()
+
+  const handleAvatarPress = () => {
+    navigation.navigate('ParentProfile')
+  }
 
   const [question, setQuestion] = React.useState('')
   const [isExpanded, setIsExpanded] = React.useState(false)
@@ -25,7 +33,7 @@ const NewsfeedBlog = () => {
   if (!newsData) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header showBackButton={true} />
+        <Header showBackButton={true} onAvatarPress={handleAvatarPress}/>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>News article not found</Text>
         </View>
@@ -59,7 +67,7 @@ const NewsfeedBlog = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header showBackButton={true} />
+      <Header showBackButton={true} onAvatarPress={handleAvatarPress} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}

@@ -1,18 +1,18 @@
 import { View, Text, ScrollView, StyleSheet } from 'react-native'
 import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Header, GuardianCard, Button } from '../components'
-import { Spacing, Typography, Colors } from '../constants'
-import { getActiveParents, getActivePickupPersons } from '../data/MockGuardian'
+import { Header, GuardianCard, Button } from '../../components'
+import { Spacing, Typography, Colors } from '../../constants'
+import { getActiveParents, getActivePickupPersons } from '../../data/MockGuardian'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { MainNavigatorParamList } from '../navigation/type'
+import { MainNavigatorParamList } from '../../navigation/type'
 import { useNavigation } from '@react-navigation/native'
 
-type DashboardNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'TabNavigator'>
+type PickupListNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'TabNavigator'>
 
 const PickupList = () => {
 
-  const navigation = useNavigation<DashboardNavigationProp>();
+  const navigation = useNavigation<PickupListNavigationProp>();
 
   const parents = getActiveParents()
   const pickupPersons = getActivePickupPersons()
@@ -32,9 +32,13 @@ const PickupList = () => {
     // TODO: Implement delete logic
   }
 
+  const handleAvatarPress = () => {
+    navigation.navigate('ParentProfile')
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <Header />
+      <Header onAvatarPress={handleAvatarPress} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}

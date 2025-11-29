@@ -3,26 +3,57 @@ import { View, Text, StyleSheet, ViewStyle, TouchableOpacity } from 'react-nativ
 import Svg, { Circle } from 'react-native-svg'
 import Icon from 'react-native-vector-icons/FontAwesome'
 import { Colors, Typography, Spacing, BorderRadius } from '../constants'
+import { isDateInCurrentWeek } from '../utils'
+
+export interface AttendanceRecord {
+  date: Date
+  present: boolean
+}
 
 export interface ProgressCardProps {
   title: string
-  percentage: number
+  percentage?: number // Optional now - can be calculated from attendance
+  attendanceRecords?: AttendanceRecord[] // For weekly attendance calculation
   containerStyle?: ViewStyle
   backgroundColor?: string
   onMoreInfoPress?: () => void
 }
 
+// Calculate attendance percentage for current week
+const calculateWeeklyAttendance = (records: AttendanceRecord[]): number => {
+  if (!records || records.length === 0) return 0
+
+  // Filter records to only include current week
+  const currentWeekRecords = records.filter(record =>
+    isDateInCurrentWeek(record.date)
+  )
+
+  if (currentWeekRecords.length === 0) return 0
+
+  // Calculate percentage of days present
+  const presentDays = currentWeekRecords.filter(record => record.present).length
+  const percentage = (presentDays / currentWeekRecords.length) * 100
+
+  return Math.round(percentage)
+}
+
 export const ProgressCard: React.FC<ProgressCardProps> = ({
   title,
   percentage,
+  attendanceRecords,
   containerStyle,
   backgroundColor = '#E3F2FD',
   onMoreInfoPress,
 }) => {
+  // Calculate percentage from attendance records if provided, otherwise use prop
+  const calculatedPercentage = attendanceRecords
+    ? calculateWeeklyAttendance(attendanceRecords)
+    : (percentage ?? 0)
+
   const radius = 35
   const strokeWidth = 8
   const circumference = 2 * Math.PI * radius
-  const strokeDashoffset = circumference - (percentage / 100) * circumference
+  const strokeDashoffset = circumference - (calculatedPercentage / 100) * circumference
 
   return (
     <View
@@ -67,7 +98,7 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
           />
         </Svg>
         <View style={styles.percentageContainer}>
-          <Text style={styles.percentageText}>{percentage}%</Text>
+          <Text style={styles.percentageText}>{calculatedPercentage}%</Text>
         </View>
       </View>
     </View>

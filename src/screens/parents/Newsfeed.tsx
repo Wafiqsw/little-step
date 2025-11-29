@@ -1,21 +1,25 @@
 import { View, Text, ScrollView, StyleSheet } from 'react-native'
 import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Header, NewsCard } from '../components'
-import { Spacing, Typography, Colors } from '../constants'
-import { mockNewsData } from '../data/MockNews'
+import { Header, NewsCard } from '../../components'
+import { Spacing, Typography, Colors } from '../../constants'
+import { mockNewsData } from '../../data/MockNews'
 import Icon from 'react-native-vector-icons/FontAwesome'
 
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { MainNavigatorParamList } from '../navigation/type'
+import { MainNavigatorParamList } from '../../navigation/type'
 import { useNavigation } from '@react-navigation/native'
 
-type DashboardNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'TabNavigator'>
+type NewsfeedNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'TabNavigator'>
 
 
 const Newsfeed = () => {
 
-  const navigation = useNavigation<DashboardNavigationProp>();
+  const navigation = useNavigation<NewsfeedNavigationProp>();
+
+  const handleAvatarPress = () => {
+    navigation.navigate('ParentProfile')
+  }
 
   // Sort news by priority: urgent -> important -> general
   const sortedNews = [...mockNewsData].sort((a, b) => {
@@ -25,7 +29,7 @@ const Newsfeed = () => {
 
   return (
     <SafeAreaView>
-      <Header />
+      <Header onAvatarPress={handleAvatarPress}/>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}

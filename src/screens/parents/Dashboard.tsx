@@ -1,13 +1,20 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Header, Slider, ProgressCard, NavigationCard } from '../components'
-import { Typography, Colors, Spacing } from '../constants'
+import { Header, Slider, ProgressCard, NavigationCard } from '../../components'
+import { Typography, Colors, Spacing } from '../../constants'
 import { useNavigation } from '@react-navigation/native'
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
-import { TabNavigatorParamList } from '../navigation/TabNavigator'
+import { ParentTabNavigatorParamList } from '../../navigation/type'
+import { CompositeNavigationProp } from '@react-navigation/native'
+import { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { MainNavigatorParamList } from '../../navigation/type'
+import { mockAttendanceRecords } from '../../data'
 
-type DashboardNavigationProp = BottomTabNavigationProp<TabNavigatorParamList, 'Home'>
+type DashboardNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<ParentTabNavigatorParamList, 'Home'>,
+  NativeStackNavigationProp<MainNavigatorParamList>
+>
 
 const Dashboard = () => {
   const navigation = useNavigation<DashboardNavigationProp>()
@@ -19,9 +26,15 @@ const Dashboard = () => {
     return status === 'Waiting' ? Colors.warning.main : Colors.success.main
   }
 
+  const handleAvatarPress = () => {
+    navigation.navigate('ParentProfile')
+  }
+
+  
+
   return (
     <SafeAreaView style={styles.container}>
-        <Header/>
+        <Header onAvatarPress={handleAvatarPress} />
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -31,9 +44,9 @@ const Dashboard = () => {
 
         <ProgressCard
           title="Weekly Attendance Progress"
-          percentage={75}
+          attendanceRecords={mockAttendanceRecords}
           backgroundColor="#E3F2FD"
-          onMoreInfoPress={() => console.log('More info pressed')}
+          onMoreInfoPress={() => navigation.navigate('AttendanceProgress')}
         />
 
         <Text style={styles.sectionTitle}>Today's Pickup</Text>

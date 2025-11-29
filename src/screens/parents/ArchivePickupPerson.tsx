@@ -1,13 +1,23 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native'
 import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Header, GuardianCard } from '../components'
-import { Spacing, Typography, Colors } from '../constants'
-import { getArchivedPickupPersons } from '../data/MockGuardian'
+import { Header, GuardianCard } from '../../components'
+import { Spacing, Typography, Colors } from '../../constants'
+import { getArchivedPickupPersons } from '../../data/MockGuardian'
 import Icon from 'react-native-vector-icons/FontAwesome'
+import { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { MainNavigatorParamList } from '../../navigation/type'
+import { useNavigation } from '@react-navigation/native'
+
+type ArchivePickupPersonNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'AddPickupPerson'>
 
 const ArchivePickupPerson = () => {
   const archivedPersons = getArchivedPickupPersons()
+  const navigation = useNavigation<ArchivePickupPersonNavigationProp>()
+  
+  const handleAvatarPress = () => {
+    navigation.navigate('ParentProfile')
+  }
 
   const handleSave = (id: number, data: { firstName: string; lastName: string; phoneNumber: string; relationship: string }) => {
     console.log('Save guardian:', id, data)
@@ -26,7 +36,7 @@ const ArchivePickupPerson = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header showBackButton={true} />
+      <Header showBackButton={true} onAvatarPress={handleAvatarPress}/>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}

@@ -1,17 +1,13 @@
 import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import Icon from 'react-native-vector-icons/FontAwesome'
-import { Dashboard, Newsfeed, PickupList } from '../screens'
+import { ParentDashboard, ParentNewsfeed, ParentPickupList } from '../screens'
+import { ParentTabNavigatorParamList } from './type'
 
-export type TabNavigatorParamList = {
-  Home: undefined
-  People: undefined
-  News: undefined
-}
 
-const Tab = createBottomTabNavigator<TabNavigatorParamList>()
+const Tab = createBottomTabNavigator<ParentTabNavigatorParamList>()
 
-export const TabNavigator = () => {
+export const ParentTabNavigator = () => {
   return (
       <Tab.Navigator
         initialRouteName="Home"
@@ -29,7 +25,7 @@ export const TabNavigator = () => {
       >
         <Tab.Screen
           name="Home"
-          component={Dashboard}
+          component={ParentDashboard}
           options={{
             tabBarIcon: ({ color, size }) => (
               <Icon name="home" size={size} color={color} />
@@ -38,7 +34,7 @@ export const TabNavigator = () => {
         />
         <Tab.Screen
           name="People"
-          component={PickupList}
+          component={ParentPickupList}
           options={{
             tabBarIcon: ({ color, size }) => (
               <Icon name="users" size={size} color={color} />
@@ -47,7 +43,7 @@ export const TabNavigator = () => {
         />
         <Tab.Screen
           name="News"
-          component={Newsfeed}
+          component={ParentNewsfeed}
           options={{
             tabBarIcon: ({ color, size }) => (
               <Icon name="newspaper-o" size={size} color={color} />

@@ -1,19 +1,24 @@
 import { View, Text, ScrollView, StyleSheet } from 'react-native'
 import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Header, Form, Button } from '../components'
-import { Typography, Colors, Spacing } from '../constants'
+import { Header, Form, Button } from '../../components'
+import { Typography, Colors, Spacing } from '../../constants'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { MainNavigatorParamList } from '../navigation/type'
+import { MainNavigatorParamList } from '../../navigation/type'
 
 type AddPickupPersonNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'AddPickupPerson'>
 
 const AddPickupPerson = () => {
   const navigation = useNavigation<AddPickupPersonNavigationProp>()
+
+  const handleAvatarPress = () => {
+    navigation.navigate('ParentProfile')
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-        <Header showBackButton={true}/>
+        <Header showBackButton={true} onAvatarPress={handleAvatarPress}/>
         <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
