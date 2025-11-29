@@ -4,7 +4,7 @@ export type MainNavigatorParamList = {
     Playground: undefined;
 
     //Parent Navigation Site
-    TabNavigator: undefined;
+    ParentTabNavigator: undefined;
     AddPickupPerson: undefined;
     ArchivePickupPerson: undefined;
     NewsfeedBlog: { newsId: number } | undefined;
@@ -15,11 +15,18 @@ export type MainNavigatorParamList = {
     ChangePassword: undefined;
 
     //Teacher Navigation Site
+    TeacherTabNavigator: undefined;
 }
 
 
 //Parent Navigation Site
 export type ParentTabNavigatorParamList = {
+  Home: undefined
+  People: undefined
+  News: undefined
+}
+
+export type TeacherTabNavigatorParamList = {
   Home: undefined
   People: undefined
   News: undefined

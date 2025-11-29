@@ -10,7 +10,7 @@ import { MainNavigatorParamList } from '../../navigation/type'
 
 type ParentProfileNavigationProp = NativeStackNavigationProp<
   MainNavigatorParamList,
-  'TabNavigator'
+  'ParentTabNavigator'
 >
 
 const ParentProfile = () => {

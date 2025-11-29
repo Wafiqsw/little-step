@@ -17,7 +17,7 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 
 type ManageProfileNavigationProp = NativeStackNavigationProp<
   MainNavigatorParamList,
-  'TabNavigator'
+  'ParentTabNavigator'
 >
 
 const ManageProfile = () => {

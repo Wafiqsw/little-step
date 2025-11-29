@@ -10,7 +10,6 @@ import {
 } from 'react-native-safe-area-context';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import MainNavigator from './src/navigation/MainNavigator';
-
 const AppTheme = {
   ...DefaultTheme,
   colors: {

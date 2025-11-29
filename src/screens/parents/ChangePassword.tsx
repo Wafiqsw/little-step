@@ -17,7 +17,7 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 
 type ChangePasswordNavigationProp = NativeStackNavigationProp<
   MainNavigatorParamList,
-  'TabNavigator'
+  'ParentTabNavigator'
 >
 
 const ChangePassword = () => {

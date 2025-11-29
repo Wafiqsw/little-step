@@ -8,7 +8,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import { useNavigation } from '@react-navigation/native'
 
-type PickupListNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'TabNavigator'>
+type PickupListNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'ParentTabNavigator'>
 
 const PickupList = () => {
 

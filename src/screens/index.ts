@@ -14,3 +14,6 @@ export {ManageSecurity as ParentManageSecurity} from "./parents/ManageSecurity"
 export {ChangePassword as ParentChangePassword} from "./parents/ChangePassword"
 
 //Teacher Screens
+export {Dashboard as TeacherDashboard} from "./teachers/Dashboard"
+export {PickupList as TeacherPickupList} from "./teachers/PickupList"
+export {Newsfeed as TeacherNewsfeed} from "./teachers/Newsfeed"

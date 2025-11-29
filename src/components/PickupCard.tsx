@@ -10,10 +10,11 @@ interface PickupCardProps {
     studentName: string
     variant: 'parent' | 'pickup'
     pickupTime?: string
+    hasArrived?: boolean // Whether parent has arrived
     onPress?: () => void
 }
 
-const PickupCard = ({ name, studentName, variant, pickupTime, onPress }: PickupCardProps) => {
+const PickupCard = ({ name, studentName, variant, pickupTime, hasArrived = false, onPress }: PickupCardProps) => {
     const circleColor = variant === 'parent' ? Colors.secondary[300] : Colors.primary[300]
 
     return (
@@ -25,7 +26,14 @@ const PickupCard = ({ name, studentName, variant, pickupTime, onPress }: PickupC
             <View style={styles.leftSection}>
                 <View style={[styles.circle, { backgroundColor: circleColor }]} />
                 <View style={styles.textContainer}>
-                    <Text style={styles.name}>{studentName}</Text>
+                    <View style={styles.nameRow}>
+                        <Text style={styles.name}>{studentName}</Text>
+                        {hasArrived && (
+                            <View style={styles.arrivedTag}>
+                                <Text style={styles.arrivedText}>Arrived</Text>
+                            </View>
+                        )}
+                    </View>
                     <Text style={styles.parentLabel}>Parent: {name}</Text>
                 </View>
             </View>
@@ -70,10 +78,26 @@ const styles = StyleSheet.create({
         flexDirection: 'column',
         flex: 1,
     },
+    nameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.sm,
+    },
     name: {
         fontSize: FontSize.base,
         fontWeight: FontWeight.medium,
         color: Colors.text.primary,
+    },
+    arrivedTag: {
+        backgroundColor: Colors.info.light,
+        paddingHorizontal: Spacing.sm,
+        paddingVertical: Spacing.xs / 2,
+        borderRadius: BorderRadius.sm,
+    },
+    arrivedText: {
+        fontSize: FontSize.xs,
+        fontWeight: FontWeight.semibold,
+        color: Colors.info.dark,
     },
     parentLabel: {
         fontSize: FontSize.sm,

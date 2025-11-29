@@ -29,7 +29,7 @@ interface DayAttendance {
   countInPercentage: boolean
 }
 
-type AttendanceProgressNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'TabNavigator'>
+type AttendanceProgressNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'ParentTabNavigator'>
 
 
 

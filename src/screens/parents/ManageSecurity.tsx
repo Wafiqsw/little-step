@@ -16,7 +16,7 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 
 type ManageSecurityNavigationProp = NativeStackNavigationProp<
   MainNavigatorParamList,
-  'TabNavigator'
+  'ParentTabNavigator'
 >
 
 const ManageSecurity = () => {
