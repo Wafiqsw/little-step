@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Header, Button, PasswordInput, SuccessModal } from '../../components'
+import { Header, Button, PasswordInput, SuccessModal, ResultModal } from '../../components'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -34,6 +34,8 @@ const ChangePassword = () => {
     confirmPassword: '',
   })
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
   const handleAvatarPress = () => {
     navigation.navigate('TeacherProfile')
@@ -74,10 +76,23 @@ const ChangePassword = () => {
       return
     }
 
-    // Here you would typically call API to change password
-    console.log('Changing password...')
-    // Show success modal
-    setShowSuccessModal(true)
+    try {
+      // Here you would typically call API to change password
+      console.log('Changing password...')
+      // Simulate potential API error
+      // throw new Error('Current password is incorrect')
+
+      // Show success modal
+      setShowSuccessModal(true)
+    } catch (error) {
+      // Show error modal
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Failed to change password. Please try again.'
+      )
+      setShowErrorModal(true)
+    }
   }
 
   const handleSuccessClose = () => {
@@ -210,6 +225,16 @@ const ChangePassword = () => {
         message="Your password has been changed successfully. Please use your new password the next time you log in."
         onClose={handleSuccessClose}
         buttonText="Done"
+      />
+
+      {/* Error Modal */}
+      <ResultModal
+        visible={showErrorModal}
+        variant="error"
+        title="Password Change Failed"
+        message={errorMessage}
+        onClose={() => setShowErrorModal(false)}
+        buttonText="Try Again"
       />
     </SafeAreaView>
   )

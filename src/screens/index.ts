@@ -1,5 +1,9 @@
 export { Playground } from "./Playground";
 
+export { OnBoarding } from "./OnBoarding";
+export { Login } from "./auth/Login";
+export { Register } from "./auth/Register";
+
 //Parents Screens
 export { Dashboard as ParentDashboard } from "./parents/Dashboard"
 export { PickupList as ParentPickupList } from "./parents/PickupList"

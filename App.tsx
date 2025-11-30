@@ -5,11 +5,14 @@
  * @format
  */
 
+import React from 'react';
 import {
   SafeAreaProvider
 } from 'react-native-safe-area-context';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import MainNavigator from './src/navigation/MainNavigator';
+import { ErrorBoundary, SplashScreen } from './src/components';
+
 const AppTheme = {
   ...DefaultTheme,
   colors: {
@@ -21,11 +24,15 @@ const AppTheme = {
 function App() {
 
   return (
-    <SafeAreaProvider>
-      <NavigationContainer theme={AppTheme}>
-        <MainNavigator />
-      </NavigationContainer>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <React.Suspense fallback={<SplashScreen />}>
+        <SafeAreaProvider>
+          <NavigationContainer theme={AppTheme}>
+            <MainNavigator />
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </React.Suspense>
+    </ErrorBoundary>
   );
 }
 

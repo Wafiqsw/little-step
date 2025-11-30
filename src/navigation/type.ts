@@ -3,6 +3,10 @@ export type MainNavigatorParamList = {
 
   Playground: undefined;
 
+  OnBoarding: undefined;
+  Login: undefined;
+  Register: undefined;
+  
   //Parent Navigation Site
   ParentTabNavigator: undefined;
   AddPickupPerson: undefined;

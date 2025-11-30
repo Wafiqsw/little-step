@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Header, Button, SuccessModal, Form } from '../../components'
+import { Header, Button, SuccessModal, ResultModal, Form } from '../../components'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -50,6 +50,8 @@ const CreateFeed = () => {
   })
 
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
   // Load existing news data if in edit mode
   useEffect(() => {
@@ -85,7 +87,7 @@ const CreateFeed = () => {
     setCurrentStep(1)
   }
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     // Validate Step 2 fields
     const newErrors = {
       heading: '',
@@ -105,15 +107,29 @@ const CreateFeed = () => {
       return
     }
 
-    if (isEditMode) {
-      // Here you would typically call API to update news
-      console.log('Updating news:', newsId, formData)
-    } else {
-      // Here you would typically call API to create news
-      console.log('Publishing news:', formData)
+    try {
+      if (isEditMode) {
+        // Here you would typically call API to update news
+        console.log('Updating news:', newsId, formData)
+        // Simulate potential API error
+        // throw new Error('Failed to update article')
+      } else {
+        // Here you would typically call API to create news
+        console.log('Publishing news:', formData)
+        // Simulate potential API error
+        // throw new Error('Failed to publish article')
+      }
+      // Show success modal
+      setShowSuccessModal(true)
+    } catch (error) {
+      // Show error modal
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred. Please try again.'
+      )
+      setShowErrorModal(true)
     }
-    // Show success modal
-    setShowSuccessModal(true)
   }
 
   const handleSuccessClose = () => {
@@ -400,6 +416,16 @@ const CreateFeed = () => {
             : 'Your announcement has been published and parents will be notified.'
         }
         onClose={handleSuccessClose}
+      />
+
+      {/* Error Modal */}
+      <ResultModal
+        visible={showErrorModal}
+        variant="error"
+        title="Operation Failed"
+        message={errorMessage}
+        onClose={() => setShowErrorModal(false)}
+        buttonText="Try Again"
       />
     </SafeAreaView>
   )

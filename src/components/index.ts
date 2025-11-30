@@ -11,6 +11,8 @@ export { DateCard } from "./DateCard"
 export { GuardianCard } from "./GuardianCard"
 export { PickupCard } from "./PickupCard"
 export { Logo } from "./Logo"
+export { WhiteCloud } from "./WhiteCloud"
+export { MoonCloud } from "./MoonCloud"
 export { Header } from "./Header"
 export { Slider } from "./Slider"
 export { ProgressCard } from "./ProgressCard"
@@ -21,9 +23,13 @@ export { AnswerCard } from "./AnswerCard"
 export { ConfirmationModal } from "./ConfirmationModal"
 export type { ConfirmationModalProps } from "./ConfirmationModal"
 export { Breadcrumb } from './Breadcrumb'
-export { SuccessModal } from './SuccessModal'
+export { SuccessModal } from './ResultModal'
+export { ResultModal } from './ResultModal'
+export type { ResultModalVariant } from './ResultModal'
 export { Avatar } from './Avatar'
 export { StudentCard } from './StudentCard'
 export type { StudentCardData } from './StudentCard'
 export { PasswordInput } from './PasswordInput'
 export type { PasswordInputProps, PasswordInputVariant, PasswordInputSize } from './PasswordInput'
+export { ErrorBoundary } from './ErrorBoundary'
+export { SplashScreen } from './SplashScreen'

@@ -1,7 +1,7 @@
 import React from 'react'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from './type';
-import { Playground, ParentAddPickupPerson, ParentArchivePickupPerson, ParentNewsfeedBlog, ParentProfile, ParentAttendanceProgress, ParentManageProfile, ParentManageSecurity, ParentChangePassword, TeacherProfile, TeacherManageSecurity, TeacherChangePassword, TeacherCreateFeed, TeacherNewsfeedBlog, TeacherMyPostsList, TeacherAllAnnouncementsList, TeacherManageStudents, TeacherAllStudents, TeacherEditStudent, TeacherAddStudentStep1Phone, TeacherAddStudentStep2Parent, TeacherAddStudentStep3Student } from '../screens';
+import { Playground, OnBoarding, Login, Register, ParentAddPickupPerson, ParentArchivePickupPerson, ParentNewsfeedBlog, ParentProfile, ParentAttendanceProgress, ParentManageProfile, ParentManageSecurity, ParentChangePassword, TeacherProfile, TeacherManageSecurity, TeacherChangePassword, TeacherCreateFeed, TeacherNewsfeedBlog, TeacherMyPostsList, TeacherAllAnnouncementsList, TeacherManageStudents, TeacherAllStudents, TeacherEditStudent, TeacherAddStudentStep1Phone, TeacherAddStudentStep2Parent, TeacherAddStudentStep3Student } from '../screens';
 import { ParentTabNavigator } from './ParentTabNavigator';
 import { TeacherTabNavigator } from './TeacherTabNavigator';
 
@@ -10,10 +10,13 @@ const Stack = createNativeStackNavigator<MainNavigatorParamList>();
 
 const MainNavigator = () => {
   return (
-    <Stack.Navigator initialRouteName='TeacherTabNavigator' screenOptions={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName='OnBoarding' screenOptions={{ headerShown: false }}>
       <Stack.Screen component={Playground} name='Playground' />
+      
 
-
+      <Stack.Screen component={OnBoarding} name='OnBoarding' />
+      <Stack.Screen component={Login} name='Login' />
+      <Stack.Screen component={Register} name='Register' />
       {/*Parent Navigation Site*/}
       <Stack.Screen component={ParentTabNavigator} name='ParentTabNavigator' />
 

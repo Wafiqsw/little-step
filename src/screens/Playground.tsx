@@ -1,8 +1,17 @@
-import { View, Text, StyleSheet, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, Modal } from 'react-native'
 import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Button, GoogleIcon, Form, Hyperlink, Checkbox, AttendanceCard, AttendanceSummaryCard, NewsCard, DateCard, GuardianCard, PickupCard } from '../components'
+import { Button, GoogleIcon, Form, Hyperlink, Checkbox, AttendanceCard, AttendanceSummaryCard, NewsCard, DateCard, GuardianCard, PickupCard, SplashScreen } from '../components'
 import { useSelectedDate, SelectedDateProvider } from '../hooks'
+import { useNavigation } from '@react-navigation/native'
+import { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { MainNavigatorParamList } from '../navigation/type'
+import Icon from 'react-native-vector-icons/FontAwesome'
+
+type PlaygroundNavigationProp = NativeStackNavigationProp<
+  MainNavigatorParamList,
+  'Playground'
+>
 
 export const Playground = () => {
   return (
@@ -14,6 +23,14 @@ export const Playground = () => {
 
 const PlaygroundContent = () => {
   const { selectedDate } = useSelectedDate()
+  const navigation = useNavigation<PlaygroundNavigationProp>()
+  const [shouldThrowError, setShouldThrowError] = React.useState(false)
+  const [showSplash, setShowSplash] = React.useState(false)
+
+  if (shouldThrowError) {
+    throw new Error('This is a test error to trigger the error boundary!')
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -22,7 +39,45 @@ const PlaygroundContent = () => {
 
         {/* Testing Area - Add your components below */}
         <View style={styles.testingArea}>
+          {/* Splash Screen Testing */}
+          <Text style={styles.sectionTitle}>Splash Screen Testing</Text>
+          <Button
+            label="Show Splash Screen"
+            onPress={() => setShowSplash(true)}
+            variant="secondary"
+            size="large"
+            icon={<Icon name="rocket" size={18} color="#371B34" />}
+          />
+
+          {/* Error Testing Buttons */}
+          <Text style={styles.sectionTitle}>Error Fallback Testing</Text>
+          <Button
+            label="Throw Test Error"
+            onPress={() => setShouldThrowError(true)}
+            variant="primary"
+            size="large"
+            icon={<Icon name="bug" size={18} color="#FFF" />}
+          />
+
+          {/* Splash Screen Modal */}
+          <Modal
+            visible={showSplash}
+            animationType="fade"
+            onRequestClose={() => setShowSplash(false)}
+          >
+            <SplashScreen />
+            <View style={{ position: 'absolute', top: 40, right: 20 }}>
+              <Button
+                label="Close"
+                onPress={() => setShowSplash(false)}
+                variant="secondary"
+                size="small"
+              />
+            </View>
+          </Modal>
+
           {/* Button with Google Icon */}
+          <Text style={styles.sectionTitle}>Other Components</Text>
           <Button
             label="Sign in with Google"
             onPress={() => console.log('Google login pressed')}
@@ -99,14 +154,12 @@ const PlaygroundContent = () => {
           <AttendanceSummaryCard
             variant="present"
             total={24}
-            onSeeMore={() => console.log('See more present')}
           />
 
           {/* Absent summary */}
           <AttendanceSummaryCard
             variant="absent"
             total={6}
-            onSeeMore={() => console.log('See more absent')}
           />
 
           {/* News Card Examples */}

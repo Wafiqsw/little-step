@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TextInput } from 'react-native'
 import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Header, Button, QuestionCard } from '../../components'
+import { Header, Button, QuestionCard, Form, SuccessModal, ResultModal } from '../../components'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
 import Icon from 'react-native-vector-icons/FontAwesome'
 import { mockNewsData, getNewsById } from '../../data/MockNews'
@@ -25,6 +25,10 @@ const NewsfeedBlog = () => {
   const [question, setQuestion] = React.useState('')
   const [isExpanded, setIsExpanded] = React.useState(false)
   const [showAllQuestions, setShowAllQuestions] = React.useState(false)
+  const [questionError, setQuestionError] = React.useState('')
+  const [showSuccessModal, setShowSuccessModal] = React.useState(false)
+  const [showErrorModal, setShowErrorModal] = React.useState(false)
+  const [errorMessage, setErrorMessage] = React.useState('')
 
   // Get news data from mock data using the newsId
   const newsData = newsId ? getNewsById(newsId) : mockNewsData[0]
@@ -33,7 +37,7 @@ const NewsfeedBlog = () => {
   if (!newsData) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header showBackButton={true} onAvatarPress={handleAvatarPress}/>
+        <Header showBackButton={true} onAvatarPress={handleAvatarPress} />
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>News article not found</Text>
         </View>
@@ -64,6 +68,38 @@ const NewsfeedBlog = () => {
   }
 
   const tagStyle = getTagColor(newsData.tag)
+
+  const handleSubmitQuestion = async () => {
+    // Validate question
+    if (!question.trim()) {
+      setQuestionError('Please enter your question')
+      return
+    }
+
+    try {
+      // Here you would typically call API to submit question
+      console.log('Question submitted:', question)
+      // Simulate potential API error
+      // throw new Error('Failed to submit question. Please check your connection.')
+
+      // Show success modal
+      setShowSuccessModal(true)
+      setQuestion('')
+      setQuestionError('')
+    } catch (error) {
+      // Show error modal
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Failed to submit question. Please try again.'
+      )
+      setShowErrorModal(true)
+    }
+  }
+
+  const handleSuccessClose = () => {
+    setShowSuccessModal(false)
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -124,23 +160,25 @@ const NewsfeedBlog = () => {
           {/* Ask Question Form */}
           <View style={styles.askQuestionContainer}>
             <Text style={styles.askQuestionLabel}>Have a question?</Text>
-            <TextInput
-              style={styles.questionInput}
+            <Form
+              label="Your Question"
+              variant="simple"
+              size="large"
               placeholder="Type your question here..."
-              placeholderTextColor={Colors.text.secondary}
               multiline
               numberOfLines={4}
               value={question}
-              onChangeText={setQuestion}
-              textAlignVertical="top"
+              onChangeText={(text) => {
+                setQuestion(text)
+                if (questionError) setQuestionError('')
+              }}
+              inputStyle={{ minHeight: 100, textAlignVertical: 'top' }}
+              error={questionError}
             />
             <Button
               label="Submit Question"
               variant="primary"
-              onPress={() => {
-                console.log('Question submitted:', question)
-                setQuestion('')
-              }}
+              onPress={handleSubmitQuestion}
             />
           </View>
 
@@ -167,6 +205,25 @@ const NewsfeedBlog = () => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Success Modal */}
+      <SuccessModal
+        visible={showSuccessModal}
+        title="Question Submitted!"
+        message="Your question has been submitted successfully. The teacher will respond soon."
+        onClose={handleSuccessClose}
+        buttonText="Done"
+      />
+
+      {/* Error Modal */}
+      <ResultModal
+        visible={showErrorModal}
+        variant="error"
+        title="Submission Failed"
+        message={errorMessage}
+        onClose={() => setShowErrorModal(false)}
+        buttonText="Try Again"
+      />
     </SafeAreaView>
   )
 }
