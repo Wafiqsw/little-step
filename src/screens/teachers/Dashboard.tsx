@@ -12,6 +12,12 @@ import {
   generateMockAttendanceRecords,
   type StudentAttendanceRecord
 } from '../../data'
+import { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { MainNavigatorParamList } from '../../navigation/type'
+import { useNavigation } from '@react-navigation/native'
+
+type DashboardNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'ParentTabNavigator'>
+
 
 // Generate attendance records for all students
 const mockAttendanceRecords: StudentAttendanceRecord[] = generateMockAttendanceRecords(
@@ -19,6 +25,13 @@ const mockAttendanceRecords: StudentAttendanceRecord[] = generateMockAttendanceR
 )
 
 const DashboardContent = () => {
+
+  const navigation = useNavigation<DashboardNavigationProp>();
+  
+  const handleAvatarPress = () => {
+    navigation.navigate('TeacherProfile')
+  }
+
   const { selectedDate } = useSelectedDate()
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -70,7 +83,7 @@ const DashboardContent = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header />
+      <Header onAvatarPress={handleAvatarPress}/>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

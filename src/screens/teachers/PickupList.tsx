@@ -4,15 +4,26 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, PickupCard } from '../../components'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
 import { getWaitingPickups, getDismissedPickups } from '../../data'
+import { useNavigation } from '@react-navigation/native'
+import { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { MainNavigatorParamList } from '../../navigation/type'
+
+type PickupListNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'TeacherTabNavigator'>
 
 const PickupList = () => {
+  const navigation = useNavigation<PickupListNavigationProp>()
+
+  const handleAvatarPress = () => {
+    navigation.navigate('TeacherProfile')
+  }
+
   // Get pickup data
   const waitingPickups = useMemo(() => getWaitingPickups(), [])
   const dismissedPickups = useMemo(() => getDismissedPickups(), [])
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header />
+      <Header onAvatarPress={handleAvatarPress} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

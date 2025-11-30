@@ -1,7 +1,7 @@
-import { View, Text, ScrollView, StyleSheet } from 'react-native'
-import React from 'react'
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native'
+import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Header, NewsCard, Button } from '../../components'
+import { Header, NewsCard, Button, TeacherNewsCard, ConfirmationModal } from '../../components'
 import { Spacing, Typography, Colors } from '../../constants'
 import { mockNewsData } from '../../data/MockNews'
 import Icon from 'react-native-vector-icons/FontAwesome'
@@ -14,21 +14,69 @@ type NewsfeedNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 
 
 const Newsfeed = () => {
   const navigation = useNavigation<NewsfeedNavigationProp>()
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false)
+  const [postToDelete, setPostToDelete] = useState<number | null>(null)
 
   const handleCreatePost = () => {
-    console.log('Create new post pressed')
-    // TODO: Navigate to create post screen
+    navigation.navigate('TeacherCreateFeed')
   }
 
-  // Sort news by priority: urgent -> important -> general
-  const sortedNews = [...mockNewsData].sort((a, b) => {
+  const handleAvatarPress = () => {
+    navigation.navigate('TeacherProfile')
+  }
+
+  const handleNewsPress = (newsId: number) => {
+    navigation.navigate('TeacherNewsfeedBlog', { newsId })
+  }
+
+  const handleSeeAllMyPosts = () => {
+    navigation.navigate('TeacherMyPostsList')
+  }
+
+  const handleSeeAllAnnouncements = () => {
+    navigation.navigate('TeacherAllAnnouncementsList')
+  }
+
+  const handleEditPost = (newsId: number) => {
+    navigation.navigate('TeacherCreateFeed', { newsId })
+  }
+
+  const handleDeletePost = (newsId: number) => {
+    setPostToDelete(newsId)
+    setDeleteModalVisible(true)
+  }
+
+  const handleConfirmDelete = () => {
+    if (postToDelete !== null) {
+      console.log('Deleting post:', postToDelete)
+      // TODO: Call API to delete the post
+      setDeleteModalVisible(false)
+      setPostToDelete(null)
+    }
+  }
+
+  const handleCancelDelete = () => {
+    setDeleteModalVisible(false)
+    setPostToDelete(null)
+  }
+
+  // Mock teacher ID - in real app, this would come from auth context
+  const currentTeacherId = 1
+
+  // Filter teacher's own posts
+  const myPosts = mockNewsData.filter(news => news.authorId === currentTeacherId)
+  const displayedMyPosts = myPosts.slice(0, 2) // Show only first 2
+
+  // All other posts
+  const allPosts = [...mockNewsData].sort((a, b) => {
     const priority = { urgent: 0, important: 1, general: 2 } as { [key: string]: number }
     return priority[a.tag] - priority[b.tag]
   })
+  const displayedAllPosts = allPosts.slice(0, 2) // Show only first 2
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header />
+      <Header onAvatarPress={handleAvatarPress} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -43,18 +91,67 @@ const Newsfeed = () => {
           style={styles.createButton}
         />
 
+        {/* My Posts Section */}
+        {myPosts.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Icon name="user-circle" size={20} color={Colors.primary[600]} />
+              <Text style={styles.sectionTitle}>My Posts</Text>
+            </View>
+            {displayedMyPosts.map((news) => (
+              <TeacherNewsCard
+                key={news.id}
+                tag={news.tag}
+                count={news.count}
+                heading={news.heading}
+                subheading={news.subheading}
+                onPress={() => handleNewsPress(news.id)}
+                onEdit={() => handleEditPost(news.id)}
+                onDelete={() => handleDeletePost(news.id)}
+              />
+            ))}
+            {myPosts.length > 2 && (
+              <TouchableOpacity
+                style={styles.seeMoreContainer}
+                onPress={handleSeeAllMyPosts}
+              >
+                <Text style={styles.seeMoreText}>See More</Text>
+                <Icon name="chevron-right" size={14} color={Colors.primary[600]} />
+              </TouchableOpacity>
+            )}
+            <View style={styles.divider} />
+          </>
+        )}
+
+        {/* All News Section */}
+        <View style={styles.sectionHeader}>
+          <Icon name="newspaper-o" size={20} color={Colors.primary[600]} />
+          <Text style={styles.sectionTitle}>All Announcements</Text>
+        </View>
+
         {/* Display all news articles sorted by priority */}
-        {sortedNews.length > 0 ? (
-          sortedNews.map((news) => (
-            <NewsCard
-              key={news.id}
-              tag={news.tag}
-              count={news.count}
-              heading={news.heading}
-              subheading={news.subheading}
-              onPress={() => console.log('News pressed:', news.id)}
-            />
-          ))
+        {allPosts.length > 0 ? (
+          <>
+            {displayedAllPosts.map((news) => (
+              <NewsCard
+                key={news.id}
+                tag={news.tag}
+                count={news.count}
+                heading={news.heading}
+                subheading={news.subheading}
+                onPress={() => handleNewsPress(news.id)}
+              />
+            ))}
+            {allPosts.length > 2 && (
+              <TouchableOpacity
+                style={styles.seeMoreContainer}
+                onPress={handleSeeAllAnnouncements}
+              >
+                <Text style={styles.seeMoreText}>See More</Text>
+                <Icon name="chevron-right" size={14} color={Colors.primary[600]} />
+              </TouchableOpacity>
+            )}
+          </>
         ) : (
           <View style={styles.emptyState}>
             <Icon name="newspaper-o" size={64} color={Colors.text.disabled} />
@@ -65,6 +162,20 @@ const Newsfeed = () => {
           </View>
         )}
       </ScrollView>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        visible={deleteModalVisible}
+        title="Delete Post"
+        message="Are you sure you want to delete this post? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        confirmColor="#F44336"
+        iconName="trash"
+        iconColor="#F44336"
+      />
     </SafeAreaView>
   )
 }
@@ -86,6 +197,36 @@ const styles = StyleSheet.create({
   },
   createButton: {
     marginBottom: Spacing.md,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  sectionTitle: {
+    fontSize: Typography.heading.h3.fontSize as number,
+    fontWeight: Typography.heading.h3.fontWeight as any,
+    color: Colors.black,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E0E0E0',
+    marginVertical: Spacing.md,
+  },
+  seeMoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  seeMoreText: {
+    fontSize: Typography.body.medium.fontSize as number,
+    fontWeight: '600',
+    color: Colors.primary[600],
   },
   emptyState: {
     alignItems: 'center',

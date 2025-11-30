@@ -9,14 +9,12 @@ export type AttendanceSummaryVariant = 'present' | 'absent'
 export interface AttendanceSummaryCardProps {
   variant: AttendanceSummaryVariant
   total: number
-  onSeeMore?: () => void
   containerStyle?: ViewStyle
 }
 
 const AttendanceSummaryCard: React.FC<AttendanceSummaryCardProps> = ({
   variant,
   total,
-  onSeeMore,
   containerStyle,
 }) => {
   // Get variant info (icon, colors, label)
@@ -77,13 +75,6 @@ const AttendanceSummaryCard: React.FC<AttendanceSummaryCardProps> = ({
         {/* Row 2: Total */}
         <Text style={styles.total}>{total}</Text>
 
-        {/* Row 3: See More Link */}
-        <Hyperlink
-          text="See more"
-          onPress={onSeeMore}
-          variant="black"
-          fontSize={Typography.body.small.fontSize as number}
-        />
       </View>
     </View>
   )

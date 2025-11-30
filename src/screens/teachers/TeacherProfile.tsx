@@ -3,21 +3,21 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, NavigationCard, Avatar, ConfirmationModal } from '../../components'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
-import { mockParentData } from '../../data/MockParent'
+import { mockTeacher } from '../../data'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 
-type ParentProfileNavigationProp = NativeStackNavigationProp<
+type TeacherProfileNavigationProp = NativeStackNavigationProp<
   MainNavigatorParamList,
-  'ParentTabNavigator'
+  'TeacherTabNavigator'
 >
 
-const ParentProfile = () => {
-  const navigation = useNavigation<ParentProfileNavigationProp>()
+const TeacherProfile = () => {
+  const navigation = useNavigation<TeacherProfileNavigationProp>()
 
-  // Sample user data - replace with actual user data from context/state
-  const userData = mockParentData
+  // Sample teacher data - replace with actual user data from context/state
+  const userData = mockTeacher
 
   // Logout confirmation modal state
   const [showLogoutModal, setShowLogoutModal] = useState(false)
@@ -34,7 +34,7 @@ const ParentProfile = () => {
     // 1. Clear user session/tokens
     // 2. Reset app state
     // 3. Navigate to login screen
-    console.log('User logged out')
+    console.log('Teacher logged out')
     setShowLogoutModal(false)
     // navigation.navigate('Login') // Uncomment when you have login screen
   }
@@ -79,36 +79,6 @@ const ParentProfile = () => {
               <Text style={styles.infoValue}>{userData.phone}</Text>
             </View>
 
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Emergency Contact</Text>
-              <Text style={styles.infoValue}>{userData.emergencyContact}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Children Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>My Children</Text>
-
-          <View style={styles.childrenList}>
-            {userData.children.map((child, index) => (
-              <View key={child.id}>
-                <View style={styles.childCard}>
-                  <Avatar name={child.name} size={50} />
-                  <View style={styles.childInfo}>
-                    <Text style={styles.childName}>{child.name}</Text>
-                    <Text style={styles.childDetails}>
-                      {child.age} years old • {child.class}
-                    </Text>
-                  </View>
-                </View>
-                {index < userData.children.length - 1 && (
-                  <View style={styles.divider} />
-                )}
-              </View>
-            ))}
           </View>
         </View>
 
@@ -118,12 +88,12 @@ const ParentProfile = () => {
 
           <View style={styles.menuList}>
             <NavigationCard
-              label="Edit Profile"
-              subheading="Update your account information"
-              iconName="edit"
-              iconColor="#2196F3"
-              backgroundColor="#E3F2FD"
-              onPress={() => navigation.navigate('ManageProfile')}
+              label="Manage Students"
+              subheading="View and manage student accounts and parents"
+              iconName="graduation-cap"
+              iconColor="#4CAF50"
+              backgroundColor="#E8F5E9"
+              onPress={() => navigation.navigate('TeacherManageStudents')}
             />
 
             <NavigationCard
@@ -132,7 +102,7 @@ const ParentProfile = () => {
               iconName="lock"
               iconColor="#FF9800"
               backgroundColor="#FFF3E0"
-              onPress={() => navigation.navigate('ManageSecurity')}
+              onPress={() => navigation.navigate('TeacherManageSecurity')}
             />
 
             <NavigationCard
@@ -184,7 +154,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.lg,
     gap: Spacing.sm,
   },
-
   userName: {
     fontSize: Typography.heading.h2.fontSize as number,
     fontWeight: Typography.heading.h2.fontWeight as any,
@@ -231,34 +200,6 @@ const styles = StyleSheet.create({
   menuList: {
     gap: Spacing.md,
   },
-  childrenList: {
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
-  },
-  childCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    gap: Spacing.md,
-  },
-
-  childInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  childName: {
-    fontSize: Typography.body.large.fontSize as number,
-    fontWeight: '600',
-    color: Colors.black,
-  },
-  childDetails: {
-    fontSize: Typography.body.small.fontSize as number,
-    fontWeight: '400',
-    color: Colors.text.secondary,
-  },
 })
 
-export { ParentProfile }
+export { TeacherProfile }

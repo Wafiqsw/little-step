@@ -17,7 +17,7 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 
 type ChangePasswordNavigationProp = NativeStackNavigationProp<
   MainNavigatorParamList,
-  'ParentTabNavigator'
+  'TeacherTabNavigator'
 >
 
 const ChangePassword = () => {
@@ -36,7 +36,7 @@ const ChangePassword = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   const handleAvatarPress = () => {
-    navigation.navigate('ParentProfile')
+    navigation.navigate('TeacherProfile')
   }
 
   const handleChangePassword = () => {
@@ -85,6 +85,7 @@ const ChangePassword = () => {
     // Navigate back on success
     navigation.goBack()
   }
+
 
 
   return (

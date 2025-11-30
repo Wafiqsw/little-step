@@ -7,7 +7,7 @@ import {
   TextInput,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Header, Button } from '../../components'
+import { Header, Button, SuccessModal } from '../../components'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
 import { mockParentData } from '../../data/MockParent'
 import { useNavigation } from '@react-navigation/native'
@@ -30,6 +30,7 @@ const ManageProfile = () => {
     phone: mockParentData.phone,
     emergencyContact: mockParentData.emergencyContact,
   })
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   const handleAvatarPress = () => {
     navigation.navigate('ParentProfile')
@@ -38,7 +39,14 @@ const ManageProfile = () => {
   const handleSave = () => {
     // Here you would typically save to backend/state management
     console.log('Saving profile data:', formData)
-    // Show success message or navigate back
+    // Show success modal
+    setShowSuccessModal(true)
+  }
+
+  const handleSuccessClose = () => {
+    setShowSuccessModal(false)
+    // Navigate back on success
+    navigation.goBack()
   }
 
   const getInitials = (name: string) => {
@@ -172,6 +180,15 @@ const ManageProfile = () => {
           </Text>
         </View>
       </ScrollView>
+
+      {/* Success Modal */}
+      <SuccessModal
+        visible={showSuccessModal}
+        title="Profile Updated!"
+        message="Your profile information has been updated successfully."
+        onClose={handleSuccessClose}
+        buttonText="Done"
+      />
     </SafeAreaView>
   )
 }
