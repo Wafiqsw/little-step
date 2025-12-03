@@ -14,6 +14,8 @@ import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import Icon from 'react-native-vector-icons/FontAwesome'
+import { auth } from '../../firebase'
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'
 
 type ChangePasswordNavigationProp = NativeStackNavigationProp<
   MainNavigatorParamList,
@@ -36,12 +38,13 @@ const ChangePassword = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleAvatarPress = () => {
     navigation.navigate('TeacherProfile')
   }
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     // Clear previous errors
     setErrors({ currentPassword: '', newPassword: '', confirmPassword: '' })
 
@@ -76,22 +79,71 @@ const ChangePassword = () => {
       return
     }
 
+    // Change password using Firebase Auth
     try {
-      // Here you would typically call API to change password
-      console.log('Changing password...')
-      // Simulate potential API error
-      // throw new Error('Current password is incorrect')
+      setIsLoading(true)
+      const currentUser = auth.currentUser
+
+      if (!currentUser || !currentUser.email) {
+        setErrorMessage('No user is currently logged in')
+        setShowErrorModal(true)
+        setIsLoading(false)
+        return
+      }
+
+      // Step 1: Reauthenticate user with current password
+      const credential = EmailAuthProvider.credential(
+        currentUser.email,
+        passwordData.currentPassword
+      )
+
+      try {
+        await reauthenticateWithCredential(currentUser, credential)
+        console.log('✅ User reauthenticated successfully')
+      } catch (reauthError: any) {
+        console.error('❌ Reauthentication failed:', reauthError)
+
+        if (reauthError.code === 'auth/wrong-password' || reauthError.code === 'auth/invalid-credential') {
+          setErrorMessage('Current password is incorrect. Please try again.')
+        } else if (reauthError.code === 'auth/too-many-requests') {
+          setErrorMessage('Too many failed attempts. Please try again later.')
+        } else {
+          setErrorMessage('Failed to verify current password. Please try again.')
+        }
+
+        setShowErrorModal(true)
+        setIsLoading(false)
+        return
+      }
+
+      // Step 2: Update password
+      await updatePassword(currentUser, passwordData.newPassword)
+      console.log('✅ Password updated successfully')
+
+      // Clear form
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      })
 
       // Show success modal
       setShowSuccessModal(true)
-    } catch (error) {
-      // Show error modal
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Failed to change password. Please try again.'
-      )
+      setIsLoading(false)
+    } catch (error: any) {
+      console.error('❌ Error changing password:', error)
+
+      let errorMsg = 'An error occurred while changing your password. Please try again.'
+
+      if (error.code === 'auth/weak-password') {
+        errorMsg = 'The new password is too weak. Please choose a stronger password.'
+      } else if (error.code === 'auth/requires-recent-login') {
+        errorMsg = 'For security reasons, please log out and log back in before changing your password.'
+      }
+
+      setErrorMessage(errorMsg)
       setShowErrorModal(true)
+      setIsLoading(false)
     }
   }
 
@@ -195,11 +247,12 @@ const ChangePassword = () => {
 
           {/* Update Password Button */}
           <Button
-            label="Update Password"
+            label={isLoading ? "Updating..." : "Update Password"}
             onPress={handleChangePassword}
             variant="primary"
             size="large"
             fullWidth
+            disabled={isLoading}
           />
         </View>
 

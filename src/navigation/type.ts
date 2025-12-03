@@ -30,7 +30,7 @@ export type MainNavigatorParamList = {
   TeacherManageStudents: undefined;
   TeacherManageStudent: undefined;
   TeacherAllStudents: undefined;
-  TeacherEditStudent: { studentId: number };
+  TeacherEditStudent: { studentId: string };
   TeacherAddStudentStep1Email: undefined;
   TeacherAddStudentStep2Parent: {
     email: string;

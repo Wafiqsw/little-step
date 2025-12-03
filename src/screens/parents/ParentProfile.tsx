@@ -152,42 +152,42 @@ const ParentProfile = () => {
               <View style={styles.infoCard}>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Full Name</Text>
-                  <Text style={styles.infoValue}>{userProfile.name || 'Not set'}</Text>
+                  <Text style={styles.infoValue}>{userProfile.name || '-'}</Text>
                 </View>
 
                 <View style={styles.divider} />
 
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Email</Text>
-                  <Text style={styles.infoValue}>{userProfile.email || 'Not set'}</Text>
+                  <Text style={styles.infoValue}>{userProfile.email || '-'}</Text>
                 </View>
 
                 <View style={styles.divider} />
 
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Phone Number</Text>
-                  <Text style={styles.infoValue}>{userProfile.numphone || 'Not set'}</Text>
+                  <Text style={styles.infoValue}>{userProfile.numphone || '-'}</Text>
                 </View>
 
                 <View style={styles.divider} />
 
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>IC Number</Text>
-                  <Text style={styles.infoValue}>{userProfile.ic || 'Not set'}</Text>
+                  <Text style={styles.infoValue}>{userProfile.ic || '-'}</Text>
                 </View>
 
                 <View style={styles.divider} />
 
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Occupation</Text>
-                  <Text style={styles.infoValue}>{userProfile.occupation || 'Not set'}</Text>
+                  <Text style={styles.infoValue}>{userProfile.occupation || '-'}</Text>
                 </View>
 
                 <View style={styles.divider} />
 
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Address</Text>
-                  <Text style={styles.infoValue}>{userProfile.address || 'Not set'}</Text>
+                  <Text style={styles.infoValue}>{userProfile.address || '-'}</Text>
                 </View>
 
               </View>

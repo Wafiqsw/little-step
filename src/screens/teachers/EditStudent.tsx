@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity } from 'react-native'
+import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, Button, SuccessModal, Form } from '../../components'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
-import { getStudentById } from '../../data/MockStudentParent'
 import Icon from 'react-native-vector-icons/FontAwesome'
+import { doc, getDoc, updateDoc } from 'firebase/firestore'
+import { db } from '../../firebase'
+import { Student } from '../../types/Student'
+import { Users } from '../../types/Users'
 
 type EditStudentNavigationProp = NativeStackNavigationProp<
     MainNavigatorParamList,
@@ -23,8 +26,6 @@ const EditStudent = () => {
 
     const [formData, setFormData] = useState({
         studentName: '',
-        studentId: '',
-        class: '',
         age: '',
         gender: 'male' as 'male' | 'female',
         parentName: '',
@@ -32,44 +33,72 @@ const EditStudent = () => {
     })
     const [errors, setErrors] = useState({
         studentName: '',
-        class: '',
         age: '',
     })
     const [showSuccessModal, setShowSuccessModal] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
+    const [isSaving, setIsSaving] = useState(false)
 
     useEffect(() => {
-        const student = getStudentById(studentId)
-        if (student) {
-            setFormData({
-                studentName: student.studentName,
-                studentId: student.studentId,
-                class: student.class,
-                age: student.age.toString(),
-                gender: student.gender,
-                parentName: student.parentName,
-                parentPhone: student.parentPhone,
-            })
+        const fetchStudent = async () => {
+            try {
+                setIsLoading(true)
+                const studentDoc = await getDoc(doc(db, 'students', studentId))
+
+                if (studentDoc.exists()) {
+                    const studentData = studentDoc.data() as Student
+
+                    // Fetch guardian data
+                    let guardianName = 'Unknown'
+                    let guardianPhone = '-'
+
+                    try {
+                        if (studentData.guardian) {
+                            const guardianDoc = await getDoc(studentData.guardian)
+                            if (guardianDoc.exists()) {
+                                const guardianData = guardianDoc.data() as Users
+                                guardianName = guardianData.name || 'Unknown'
+                                guardianPhone = guardianData.numphone || '-'
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error fetching guardian:', error)
+                    }
+
+                    setFormData({
+                        studentName: studentData.name,
+                        age: studentData.age.toString(),
+                        gender: studentData.gender,
+                        parentName: guardianName,
+                        parentPhone: guardianPhone,
+                    })
+                } else {
+                    console.error('Student not found')
+                }
+            } catch (error) {
+                console.error('Error fetching student:', error)
+            } finally {
+                setIsLoading(false)
+            }
         }
+
+        fetchStudent()
     }, [studentId])
 
     const handleAvatarPress = () => {
         navigation.navigate('TeacherProfile')
     }
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         // Clear previous errors
-        setErrors({ studentName: '', class: '', age: '' })
+        setErrors({ studentName: '', age: '' })
 
         // Validate form
         let hasError = false
-        const newErrors = { studentName: '', class: '', age: '' }
+        const newErrors = { studentName: '', age: '' }
 
         if (!formData.studentName.trim()) {
             newErrors.studentName = 'Please enter student name'
-            hasError = true
-        }
-        if (!formData.class.trim()) {
-            newErrors.class = 'Please enter class'
             hasError = true
         }
         if (!formData.age.trim()) {
@@ -85,13 +114,41 @@ const EditStudent = () => {
             return
         }
 
-        console.log('Updating student:', formData)
-        setShowSuccessModal(true)
+        try {
+            setIsSaving(true)
+
+            // Update student in Firestore
+            await updateDoc(doc(db, 'students', studentId), {
+                name: formData.studentName,
+                age: Number(formData.age),
+                gender: formData.gender,
+            })
+
+            console.log('✅ Student updated successfully')
+            setShowSuccessModal(true)
+        } catch (error) {
+            console.error('❌ Error updating student:', error)
+            // You might want to show an error modal here
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     const handleSuccessClose = () => {
         setShowSuccessModal(false)
         navigation.goBack()
+    }
+
+    if (isLoading) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <Header showBackButton onAvatarPress={handleAvatarPress} />
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#371B34" />
+                    <Text style={styles.loadingText}>Loading student data...</Text>
+                </View>
+            </SafeAreaView>
+        )
     }
 
     return (
@@ -106,31 +163,6 @@ const EditStudent = () => {
                 <Text style={styles.pageSubtitle}>
                     Update student information
                 </Text>
-
-                {/* Student ID (Read-only) */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Icon name="id-card" size={20} color={Colors.primary[600]} />
-                        <Text style={styles.sectionTitle}>Student ID</Text>
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Student ID</Text>
-                        <View style={[styles.inputContainer, styles.inputContainerDisabled]}>
-                            <Icon
-                                name="id-card"
-                                size={18}
-                                color={Colors.text.secondary}
-                                style={styles.inputIcon}
-                            />
-                            <TextInput
-                                style={styles.input}
-                                value={formData.studentId}
-                                editable={false}
-                            />
-                        </View>
-                    </View>
-                </View>
 
                 {/* Student Information (Editable) */}
                 <View style={styles.section}>
@@ -156,26 +188,6 @@ const EditStudent = () => {
                                     setFormData({ ...formData, studentName: text })
                                 }
                                 placeholder="e.g., Ahmad bin Ali"
-                                placeholderTextColor={Colors.text.disabled}
-                            />
-                        </View>
-                    </View>
-
-                    {/* Class */}
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Class *</Text>
-                        <View style={styles.inputContainer}>
-                            <Icon
-                                name="users"
-                                size={18}
-                                color={Colors.text.secondary}
-                                style={styles.inputIcon}
-                            />
-                            <TextInput
-                                style={styles.input}
-                                value={formData.class}
-                                onChangeText={(text) => setFormData({ ...formData, class: text })}
-                                placeholder="e.g., Year 1 Amanah"
                                 placeholderTextColor={Colors.text.disabled}
                             />
                         </View>
@@ -311,11 +323,12 @@ const EditStudent = () => {
                 </View>
 
                 <Button
-                    label="Save Changes"
+                    label={isSaving ? "Saving..." : "Save Changes"}
                     onPress={handleSubmit}
                     variant="primary"
                     size="large"
                     fullWidth
+                    disabled={isSaving}
                     icon={<Icon name="check" size={18} color={Colors.white} />}
                 />
             </ScrollView>
@@ -429,6 +442,16 @@ const styles = StyleSheet.create({
     },
     genderOptionTextSelected: {
         color: Colors.white,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: Spacing.md,
+    },
+    loadingText: {
+        fontSize: Typography.body.medium.fontSize as number,
+        color: Colors.text.secondary,
     },
 })
 

@@ -1,13 +1,15 @@
-import React, { useState } from 'react'
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import React, { useState, useCallback } from 'react'
+import { ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, NavigationCard, Avatar, ConfirmationModal } from '../../components'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import { logoutUser } from '../../firebase/auth'
-
+import { auth } from '../../firebase'
+import { getDataById } from '../../firebase/firestore'
+import { Users } from '../../types/Users'
 
 import { useAuth } from '../../context/AuthProvider';
 
@@ -18,11 +20,41 @@ type TeacherProfileNavigationProp = NativeStackNavigationProp<
 
 const TeacherProfile = () => {
   const navigation = useNavigation<TeacherProfileNavigationProp>()
-  const { user, userProfile } = useAuth();
+  const { userProfile, setUserProfile } = useAuth();
 
-
-  // Logout confirmation modal state
+  // State
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+
+  // Fetch user profile data
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      setIsLoadingProfile(true)
+      const currentUser = auth.currentUser
+      if (!currentUser) {
+        console.error('No authenticated user found')
+        return
+      }
+
+      const userData = await getDataById<Users>('users', currentUser.uid)
+      if (userData && setUserProfile) {
+        setUserProfile(userData)
+        console.log('✅ Teacher profile refreshed')
+      }
+    } catch (error) {
+      console.error('Error fetching teacher profile:', error)
+    } finally {
+      setIsLoadingProfile(false)
+    }
+  }, [setUserProfile])
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 TeacherProfile screen focused - refreshing data')
+      fetchUserProfile()
+    }, [fetchUserProfile])
+  )
 
   // Navigation handler
   const handleAvatarPress = () => {
@@ -61,38 +93,51 @@ const TeacherProfile = () => {
         <Text style={styles.pageTitle}>Profile</Text>
 
         {/* Profile Section */}
-        <View style={styles.profileSection}>
-          <Avatar name={userProfile?.name || 'User'} size={100} />
-          <Text style={styles.userName}>{userProfile?.name || 'Loading...'}</Text>
-          <Text style={styles.userEmail}>{userProfile?.email || 'Loading...'}</Text>
-        </View>
-
-        {/* Account Information Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Information</Text>
-
-          <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Full Name</Text>
-              <Text style={styles.infoValue}>{userProfile?.name || 'N/A'}</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Email</Text>
-              <Text style={styles.infoValue}>{userProfile?.email || 'N/A'}</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Phone Number</Text>
-              <Text style={styles.infoValue}>{userProfile?.numphone || 'N/A'}</Text>
-            </View>
-
+        {isLoadingProfile ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#371B34" />
+            <Text style={styles.loadingText}>Refreshing profile...</Text>
           </View>
-        </View>
+        ) : userProfile ? (
+          <>
+            <View style={styles.profileSection}>
+              <Avatar name={userProfile.name || 'User'} size={100} />
+              <Text style={styles.userName}>{userProfile.name || 'User'}</Text>
+              <Text style={styles.userEmail}>{userProfile.email || ''}</Text>
+            </View>
+
+            {/* Account Information Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Account Information</Text>
+
+              <View style={styles.infoCard}>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Full Name</Text>
+                  <Text style={styles.infoValue}>{userProfile.name || '-'}</Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Email</Text>
+                  <Text style={styles.infoValue}>{userProfile.email || '-'}</Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Phone Number</Text>
+                  <Text style={styles.infoValue}>{userProfile.numphone || '-'}</Text>
+                </View>
+
+              </View>
+            </View>
+          </>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>Unable to load profile</Text>
+          </View>
+        )}
 
         {/* Settings & Actions Section */}
         <View style={styles.section}>
@@ -211,6 +256,33 @@ const styles = StyleSheet.create({
   },
   menuList: {
     gap: Spacing.md,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  loadingText: {
+    fontSize: Typography.body.medium.fontSize as number,
+    color: Colors.text.secondary,
+  },
+  emptyState: {
+    padding: Spacing.lg,
+    backgroundColor: Colors.neutral[50],
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateText: {
+    fontSize: Typography.body.medium.fontSize as number,
+    color: Colors.text.secondary,
+    textAlign: 'center',
   },
 })
 

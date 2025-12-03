@@ -5,10 +5,8 @@ import { Avatar } from './Avatar'
 import Icon from 'react-native-vector-icons/FontAwesome'
 
 export interface StudentCardData {
-    id: number
+    id: string
     studentName: string
-    studentId: string
-    class: string
     age: number
     gender: 'male' | 'female'
     parentName: string
@@ -18,7 +16,7 @@ export interface StudentCardData {
 
 interface StudentCardProps {
     student: StudentCardData
-    onPress?: (studentId: number) => void
+    onPress?: (studentId: string) => void
 }
 
 const StudentCard = ({ student, onPress }: StudentCardProps) => {
@@ -35,16 +33,12 @@ const StudentCard = ({ student, onPress }: StudentCardProps) => {
                     <Text style={styles.studentName}>{student.studentName}</Text>
                     <View style={styles.studentMeta}>
                         <View style={styles.metaItem}>
-                            <Icon name="id-card" size={12} color={Colors.text.secondary} />
-                            <Text style={styles.metaText}>{student.studentId}</Text>
-                        </View>
-                        <View style={styles.metaItem}>
-                            <Icon name="users" size={12} color={Colors.text.secondary} />
-                            <Text style={styles.metaText}>{student.class}</Text>
-                        </View>
-                        <View style={styles.metaItem}>
                             <Icon name="birthday-cake" size={12} color={Colors.text.secondary} />
                             <Text style={styles.metaText}>{student.age} years</Text>
+                        </View>
+                        <View style={styles.metaItem}>
+                            <Icon name={student.gender === 'male' ? 'male' : 'female'} size={12} color={Colors.text.secondary} />
+                            <Text style={styles.metaText}>{student.gender === 'male' ? 'Male' : 'Female'}</Text>
                         </View>
                     </View>
                 </View>

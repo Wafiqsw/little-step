@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import {
   View,
   Text,
@@ -6,15 +6,19 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Header, Button, Avatar, StudentCard } from '../../components'
+import { Header, Button, Avatar, StudentCard, StudentCardData } from '../../components'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
-import { mockStudentsWithParents, StudentWithParent } from '../../data/MockStudentParent'
 import Icon from 'react-native-vector-icons/FontAwesome'
+import { collection, getDocs, getDoc } from 'firebase/firestore'
+import { db } from '../../firebase'
+import { Student } from '../../types/Student'
+import { Users } from '../../types/Users'
 
 type ManageStudentsNavigationProp = NativeStackNavigationProp<
   MainNavigatorParamList,
@@ -24,6 +28,67 @@ type ManageStudentsNavigationProp = NativeStackNavigationProp<
 const ManageStudents = () => {
   const navigation = useNavigation<ManageStudentsNavigationProp>()
   const [searchQuery, setSearchQuery] = useState('')
+  const [students, setStudents] = useState<StudentCardData[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch students from Firestore
+  const fetchStudents = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const studentsRef = collection(db, 'students')
+      const studentsSnapshot = await getDocs(studentsRef)
+
+      const studentsData = await Promise.all(
+        studentsSnapshot.docs.map(async (doc) => {
+          const studentData = doc.data() as Student
+
+          // Fetch guardian data
+          let guardianName = 'Unknown'
+          let guardianPhone = '-'
+          let guardianHasAccount = false
+
+          try {
+            if (studentData.guardian) {
+              const guardianDoc = await getDoc(studentData.guardian)
+              if (guardianDoc.exists()) {
+                const guardianData = guardianDoc.data() as Users
+                guardianName = guardianData.name || 'Unknown'
+                guardianPhone = guardianData.numphone || '-'
+                guardianHasAccount = guardianData.registered || false
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching guardian:', error)
+          }
+
+          return {
+            id: doc.id,
+            studentName: studentData.name,
+            age: studentData.age,
+            gender: studentData.gender,
+            parentName: guardianName,
+            parentPhone: guardianPhone,
+            parentHasAccount: guardianHasAccount,
+          } as StudentCardData
+        })
+      )
+
+      setStudents(studentsData)
+      console.log(`✅ Fetched ${studentsData.length} students`)
+    } catch (error) {
+      console.error('Error fetching students:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 ManageStudents screen focused - fetching students')
+      fetchStudents()
+    }, [fetchStudents])
+  )
 
   const handleAvatarPress = () => {
     navigation.navigate('TeacherProfile')
@@ -33,16 +98,15 @@ const ManageStudents = () => {
     navigation.navigate('TeacherAddStudentStep1Email')
   }
 
-  const handleEditStudent = (studentId: number) => {
+  const handleEditStudent = (studentId: string) => {
     navigation.navigate('TeacherEditStudent', { studentId })
   }
 
   // Filter students based on search query
-  const filteredStudents = mockStudentsWithParents.filter((student) => {
+  const filteredStudents = students.filter((student) => {
     const query = searchQuery.toLowerCase()
     return (
       student.studentName.toLowerCase().includes(query) ||
-      student.studentId.toLowerCase().includes(query) ||
       student.parentName.toLowerCase().includes(query) ||
       student.parentPhone.includes(query)
     )
@@ -69,7 +133,7 @@ const ManageStudents = () => {
           <View style={styles.headerTextContainer}>
             <Text style={styles.pageTitle}>Manage Students</Text>
             <Text style={styles.pageSubtitle}>
-              {mockStudentsWithParents.length} students in Year 1 Amanah
+              {students.length} students registered
             </Text>
           </View>
         </View>
@@ -119,7 +183,12 @@ const ManageStudents = () => {
 
         {/* Students List */}
         <View style={styles.studentsListSection}>
-          {displayedStudents.length > 0 ? (
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#371B34" />
+              <Text style={styles.loadingText}>Loading students...</Text>
+            </View>
+          ) : displayedStudents.length > 0 ? (
             <>
               {displayedStudents.map((student) => (
                 <StudentCard
@@ -253,6 +322,16 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl * 2,
+    gap: Spacing.md,
+  },
+  loadingText: {
+    fontSize: Typography.body.medium.fontSize as number,
+    color: Colors.text.secondary,
   },
 })
 
