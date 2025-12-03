@@ -7,6 +7,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import Icon from 'react-native-vector-icons/FontAwesome'
+import { sendVerificationEmail } from '../../firebase/emailFunctions'
 
 type Step3NavigationProp = NativeStackNavigationProp<
     MainNavigatorParamList,
@@ -18,7 +19,7 @@ type Step3RouteProp = RouteProp<MainNavigatorParamList, 'TeacherAddStudentStep3S
 const AddStudentStep3Student = () => {
     const navigation = useNavigation<Step3NavigationProp>()
     const route = useRoute<Step3RouteProp>()
-    const { phoneNumber, parentName, parentEmail, isExistingParent } = route.params
+    const { email, parentName, parentPhone, isExistingParent, existingParent } = route.params
 
     const [formData, setFormData] = useState({
         studentName: '',
@@ -35,6 +36,63 @@ const AddStudentStep3Student = () => {
 
     const handleAvatarPress = () => {
         navigation.navigate('TeacherProfile')
+    }
+
+    // Generate random 6-digit TOC (verification code)
+    const generateTOC = (): string => {
+        return Math.floor(100000 + Math.random() * 900000).toString()
+    }
+
+    // Handle registration - you can edit this later to save to Firebase
+    const handleRegister = async () => {
+        try {
+            // Prepare parent data - use existingParent if available, otherwise create new
+            const parentData = existingParent || {
+                email: email,
+                name: parentName,
+                numphone: parentPhone || '',
+                role: 'guardian' as const,
+                toc: generateTOC(),
+                ic: '',
+                address: '',
+                occupation: '',
+                registered: false,
+            }
+
+            // Prepare student data matching Student type (sub-collection)
+            const studentData = {
+                name: formData.studentName,
+                class: formData.class,
+                age: Number(formData.age),
+                gender: formData.gender as 'male' | 'female',
+                guardianName: parentName,
+                guardianEmail: email,
+            }
+
+            // Console log as JSON
+            console.log(JSON.stringify({
+                parentData,
+                studentData
+            }, null, 2))
+
+            // Send verification email only for new parents
+            if (!isExistingParent && parentData.toc) {
+                console.log('Sending verification email to:', parentData.email)
+                await sendVerificationEmail(
+                    parentData.email,
+                    parentData.toc,
+                    parentData.name,
+                    studentData.name
+                )
+                console.log('Verification email sent successfully!')
+            }
+
+            // Show success modal
+            setShowSuccessModal(true)
+        } catch (error) {
+            console.error('Error during registration:', error)
+            // You might want to show an error modal here
+        }
     }
 
     const handleSubmit = () => {
@@ -66,19 +124,8 @@ const AddStudentStep3Student = () => {
             return
         }
 
-        // Log all data
-        console.log('Registering student:', {
-            student: formData,
-            parent: {
-                name: parentName,
-                phone: phoneNumber,
-                email: parentEmail,
-            },
-            isExistingParent,
-        })
-
-        // Show success modal
-        setShowSuccessModal(true)
+        // Call handleRegister to process registration
+        handleRegister()
     }
 
     const handleSuccessClose = () => {
@@ -93,7 +140,7 @@ const AddStudentStep3Student = () => {
 
             {/* Breadcrumb */}
             <Breadcrumb
-                steps={['Phone', 'Parent Details', 'Student Details']}
+                steps={['Email', 'Parent Details', 'Student Details']}
                 currentStep={2}
             />
 
@@ -214,7 +261,7 @@ const AddStudentStep3Student = () => {
                     </View>
                 </View>
 
-                {/* Important Note about SMS */}
+                {/* Important Note about Email */}
                 {!isExistingParent && (
                     <View style={styles.importantNote}>
                         <Icon name="info-circle" size={20} color={Colors.primary[700]} />
@@ -222,7 +269,7 @@ const AddStudentStep3Student = () => {
                             <Text style={styles.importantNoteTitle}>Important Note</Text>
                             <Text style={styles.importantNoteText}>
                                 After registering the student, a verification code (TOC) will be sent
-                                to the parent's phone number via SMS. The parent needs to use
+                                to the parent's email address. The parent needs to use
                                 this code to create their account and access the parent portal.
                             </Text>
                         </View>
@@ -243,7 +290,7 @@ const AddStudentStep3Student = () => {
             <SuccessModal
                 visible={showSuccessModal}
                 title="Student Registered Successfully!"
-                message="The student has been added to the system. The parent will receive an SMS with instructions to create their account."
+                message="The student has been added to the system. The parent will receive an email with instructions to create their account."
                 onClose={handleSuccessClose}
                 buttonText="Back to Manage Students"
             />

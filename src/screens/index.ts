@@ -31,6 +31,6 @@ export { AllAnnouncementsList as TeacherAllAnnouncementsList } from "./teachers/
 export { ManageStudents as TeacherManageStudents } from "./teachers/ManageStudents"
 export { AllStudents as TeacherAllStudents } from "./teachers/AllStudents"
 export { EditStudent as TeacherEditStudent } from "./teachers/EditStudent"
-export { AddStudentStep1Phone as TeacherAddStudentStep1Phone } from "./teachers/AddStudentStep1Phone"
+export { AddStudentStep1Email as TeacherAddStudentStep1Email } from "./teachers/AddStudentStep1Email"
 export { AddStudentStep2Parent as TeacherAddStudentStep2Parent } from "./teachers/AddStudentStep2Parent"
 export { AddStudentStep3Student as TeacherAddStudentStep3Student } from "./teachers/AddStudentStep3Student"

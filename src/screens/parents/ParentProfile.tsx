@@ -3,10 +3,12 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, NavigationCard, Avatar, ConfirmationModal } from '../../components'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
-import { mockParentData } from '../../data/MockParent'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
+import { logoutUser } from '../../firebase/auth'
+
+import { useAuth } from '../../context/AuthProvider';
 
 type ParentProfileNavigationProp = NativeStackNavigationProp<
   MainNavigatorParamList,
@@ -15,9 +17,8 @@ type ParentProfileNavigationProp = NativeStackNavigationProp<
 
 const ParentProfile = () => {
   const navigation = useNavigation<ParentProfileNavigationProp>()
-
-  // Sample user data - replace with actual user data from context/state
-  const userData = mockParentData
+  const { user, userProfile, isLoading: authLoading } = useAuth();
+  
 
   // Logout confirmation modal state
   const [showLogoutModal, setShowLogoutModal] = useState(false)
@@ -29,14 +30,24 @@ const ParentProfile = () => {
   }
 
   // Handle logout
-  const handleLogout = () => {
-    // Here you would typically:
-    // 1. Clear user session/tokens
-    // 2. Reset app state
-    // 3. Navigate to login screen
-    console.log('User logged out')
-    setShowLogoutModal(false)
-    // navigation.navigate('Login') // Uncomment when you have login screen
+  const handleLogout = async () => {
+    try {
+      console.log('🔄 Logging out...')
+
+      // Firebase logout
+      await logoutUser()
+      console.log('✅ Logout successful!')
+      setShowLogoutModal(false)
+
+      // Navigate to login screen and clear stack
+      navigation.replace('Login')
+
+    } catch (error: any) {
+      console.log('❌ Logout failed!')
+      console.log('Error Code:', error.code)
+      console.log('Error Message:', error.message)
+      setShowLogoutModal(false)
+    }
   }
 
   return (
@@ -50,9 +61,9 @@ const ParentProfile = () => {
 
         {/* Profile Section */}
         <View style={styles.profileSection}>
-          <Avatar name={userData.name} size={100} />
-          <Text style={styles.userName}>{userData.name}</Text>
-          <Text style={styles.userEmail}>{userData.email}</Text>
+          <Avatar name={userProfile!.name} size={100} />
+          <Text style={styles.userName}>{userProfile!.name}</Text>
+          <Text style={styles.userEmail}>{userProfile!.email}</Text>
         </View>
 
         {/* Account Information Section */}
@@ -62,29 +73,37 @@ const ParentProfile = () => {
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Full Name</Text>
-              <Text style={styles.infoValue}>{userData.name}</Text>
+              <Text style={styles.infoValue}>{userProfile!.name}</Text>
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Email</Text>
-              <Text style={styles.infoValue}>{userData.email}</Text>
+              <Text style={styles.infoValue}>{userProfile!.email}</Text>
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Phone Number</Text>
-              <Text style={styles.infoValue}>{userData.phone}</Text>
+              <Text style={styles.infoValue}>{userProfile!.numphone}</Text>
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Emergency Contact</Text>
-              <Text style={styles.infoValue}>{userData.emergencyContact}</Text>
+              <Text style={styles.infoLabel}>Occupation</Text>
+              <Text style={styles.infoValue}>{userProfile!.occupation}</Text>
             </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Address</Text>
+              <Text style={styles.infoValue}>{userProfile!.address}</Text>
+            </View>
+
           </View>
         </View>
 
@@ -92,6 +111,7 @@ const ParentProfile = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>My Children</Text>
 
+{/*}
           <View style={styles.childrenList}>
             {userData.children.map((child, index) => (
               <View key={child.id}>
@@ -110,6 +130,8 @@ const ParentProfile = () => {
               </View>
             ))}
           </View>
+{*/}
+
         </View>
 
         {/* Settings & Actions Section */}

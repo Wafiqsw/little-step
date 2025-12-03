@@ -18,15 +18,15 @@ type Step2RouteProp = RouteProp<MainNavigatorParamList, 'TeacherAddStudentStep2P
 const AddStudentStep2Parent = () => {
     const navigation = useNavigation<Step2NavigationProp>()
     const route = useRoute<Step2RouteProp>()
-    const { phoneNumber, existingParent } = route.params
+    const { email, existingParent } = route.params
 
     const [formData, setFormData] = useState({
         parentName: existingParent?.name || '',
-        parentEmail: existingParent?.email || '',
+        parentPhone: existingParent?.numphone || '',
     })
     const [errors, setErrors] = useState({
         parentName: '',
-        parentEmail: '',
+        parentPhone: '',
     })
 
     const isExistingParent = !!existingParent
@@ -37,19 +37,14 @@ const AddStudentStep2Parent = () => {
 
     const handleNext = () => {
         // Clear previous errors
-        setErrors({ parentName: '', parentEmail: '' })
+        setErrors({ parentName: '', parentPhone: '' })
 
         // Validate form
         let hasError = false
-        const newErrors = { parentName: '', parentEmail: '' }
+        const newErrors = { parentName: '', parentPhone: '' }
 
         if (!formData.parentName.trim()) {
             newErrors.parentName = 'Please enter parent name'
-            hasError = true
-        }
-
-        if (formData.parentEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.parentEmail)) {
-            newErrors.parentEmail = 'Please enter a valid email address'
             hasError = true
         }
 
@@ -59,10 +54,11 @@ const AddStudentStep2Parent = () => {
         }
 
         navigation.navigate('TeacherAddStudentStep3Student', {
-            phoneNumber: phoneNumber,
+            email: email,
             parentName: formData.parentName,
-            parentEmail: formData.parentEmail,
+            parentPhone: formData.parentPhone,
             isExistingParent,
+            existingParent: existingParent,
         })
     }
 
@@ -72,7 +68,7 @@ const AddStudentStep2Parent = () => {
 
             {/* Breadcrumb */}
             <Breadcrumb
-                steps={['Phone', 'Parent Details', 'Student Details']}
+                steps={['Email', 'Parent Details', 'Student Details']}
                 currentStep={1}
             />
 
@@ -116,28 +112,29 @@ const AddStudentStep2Parent = () => {
                         error={errors.parentName}
                     />
 
-                    {/* Parent Phone Number */}
+                    {/* Parent Email Address */}
                     <Form
-                        label="Parent Phone Number *"
+                        label="Parent Email Address *"
                         variant="simple"
                         size="large"
-                        value={phoneNumber}
-                        placeholder="e.g., +60123456789"
+                        value={email}
+                        placeholder="e.g., parent@example.com"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
                         editable={false}
                     />
 
-                    {/* Parent Email (Optional) */}
+                    {/* Parent Phone Number (Optional) */}
                     <Form
-                        label="Parent Email (Optional)"
+                        label="Parent Phone Number (Optional)"
                         variant="simple"
                         size="large"
-                        value={formData.parentEmail}
-                        onChangeText={(text) => setFormData({ ...formData, parentEmail: text })}
-                        placeholder="e.g., ali.hassan@example.com"
-                        keyboardType="email-address"
-                        autoCapitalize="none"
+                        value={formData.parentPhone}
+                        onChangeText={(text) => setFormData({ ...formData, parentPhone: text })}
+                        placeholder="e.g., +60123456789 or 0123456789"
+                        keyboardType="phone-pad"
                         editable={!isExistingParent}
-                        error={errors.parentEmail}
+                        error={errors.parentPhone}
                     />
                 </View>
 

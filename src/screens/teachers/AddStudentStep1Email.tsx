@@ -6,74 +6,92 @@ import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
-import { searchParentByPhone, Parent } from '../../data/MockStudentParent'
-import { normalizePhoneNumber, isValidMalaysianPhoneNumber } from '../../utils'
+import { normalizeEmail, isValidEmail } from '../../utils'
 import Icon from 'react-native-vector-icons/FontAwesome'
+import { Users } from '../../types/Users'
+import { getUserByEmail } from '../../firebase/firestore'
 
 type Step1NavigationProp = NativeStackNavigationProp<
     MainNavigatorParamList,
-    'TeacherAddStudentStep1Phone'
+    'TeacherAddStudentStep1Email'
 >
 
-const AddStudentStep1Phone = () => {
+const AddStudentStep1Email = () => {
     const navigation = useNavigation<Step1NavigationProp>()
-    const [phoneNumber, setPhoneNumber] = useState('')
+    const [email, setEmail] = useState('')
     const [showModal, setShowModal] = useState(false)
-    const [foundParent, setFoundParent] = useState<Parent | null>(null)
+    const [foundParent, setFoundParent] = useState<Users | null>(null)
     const [error, setError] = useState('')
 
     const handleAvatarPress = () => {
         navigation.navigate('TeacherProfile')
     }
 
-    const handleCheckPhone = () => {
+    const handleCheckEmail = async () => {
         // Clear previous errors
         setError('')
 
-        if (!phoneNumber.trim()) {
-            setError('Please enter a phone number')
+        if (!email.trim()) {
+            setError('Please enter an email address')
             return
         }
 
-        // Validate phone number format
-        if (!isValidMalaysianPhoneNumber(phoneNumber)) {
-            setError('Please enter a valid Malaysian phone number (e.g., 0123456789 or +60123456789)')
+        // Validate email format
+        if (!isValidEmail(email)) {
+            setError('Please enter a valid email address')
             return
         }
 
-        // Normalize phone number
-        const normalizedPhone = normalizePhoneNumber(phoneNumber)
+        // Normalize email
+        const normalizedEmail = normalizeEmail(email)
 
-        const existingParent = searchParentByPhone(normalizedPhone)
-        if (existingParent) {
-            // Parent found - show modal
-            setFoundParent(existingParent)
-            setShowModal(true)
-        } else {
-            // Parent not found - go to step 2 with empty form
-            navigation.navigate('TeacherAddStudentStep2Parent', {
-                phoneNumber: normalizedPhone,
-                existingParent: null,
-            })
+        try {
+            // Check if parent exists in Firestore by email
+            const existingParent = await getUserByEmail(normalizedEmail)
+            console.log('Existing parent:', existingParent)
+
+            if (existingParent) {
+                // Parent found - show modal
+                console.log('Setting foundParent:', existingParent)
+                console.log('Setting showModal to true')
+                setFoundParent(existingParent as any)
+                setShowModal(true)
+                console.log('Modal state updated')
+            } else {
+                // Parent not found - go to step 2 with empty form
+                console.log('No parent found, navigating to step 2')
+                navigation.navigate('TeacherAddStudentStep2Parent', {
+                    email: normalizedEmail,
+                    existingParent: null,
+                })
+            }
+        } catch (error) {
+            console.error('Error checking email:', error)
+            setError('An error occurred while checking the email. Please try again.')
         }
     }
 
     const handleUseExisting = () => {
         setShowModal(false)
-        const normalizedPhone = normalizePhoneNumber(phoneNumber)
+        const normalizedEmail = normalizeEmail(email)
         navigation.navigate('TeacherAddStudentStep2Parent', {
-            phoneNumber: normalizedPhone,
+            email: normalizedEmail,
             existingParent: foundParent,
         })
     }
 
     const handleCreateNew = () => {
         setShowModal(false)
-        const normalizedPhone = normalizePhoneNumber(phoneNumber)
+        const normalizedEmail = normalizeEmail(email)
         navigation.navigate('TeacherAddStudentStep2Parent', {
-            phoneNumber: normalizedPhone,
+            email: normalizedEmail,
             existingParent: null,
         })
+    }
+
+    const handleCloseModal = () => {
+        setShowModal(false)
+        setFoundParent(null)
     }
 
     return (
@@ -85,24 +103,25 @@ const AddStudentStep1Phone = () => {
             >
                 <Text style={styles.pageTitle}>Add New Student</Text>
                 <Text style={styles.pageSubtitle}>
-                    Let's start by verifying the parent's contact information
+                    Let's start by verifying the parent's email address
                 </Text>
 
-                {/* Phone Verification Form */}
+                {/* Email Verification Form */}
                 <View style={styles.formSection}>
                     <View style={styles.sectionHeader}>
-                        <Icon name="phone" size={20} color={Colors.primary[600]} />
-                        <Text style={styles.sectionTitle}>Parent Phone Number</Text>
+                        <Icon name="envelope" size={20} color={Colors.primary[600]} />
+                        <Text style={styles.sectionTitle}>Parent Email Address</Text>
                     </View>
-                    {/* Phone Number Input */}
+                    {/* Email Input */}
                     <Form
-                        label="Phone Number *"
+                        label="Email Address *"
                         variant="simple"
                         size="large"
-                        value={phoneNumber}
-                        onChangeText={setPhoneNumber}
-                        placeholder="e.g., +60123456789 or 0123456789"
-                        keyboardType="phone-pad"
+                        value={email}
+                        onChangeText={setEmail}
+                        placeholder="e.g., parent@example.com"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
                         error={error}
                     />
 
@@ -115,8 +134,8 @@ const AddStudentStep1Phone = () => {
                 </View>
 
                 <Button
-                    label="Check Phone Number"
-                    onPress={handleCheckPhone}
+                    label="Check Email Address"
+                    onPress={handleCheckEmail}
                     variant="primary"
                     size="large"
                     fullWidth
@@ -124,15 +143,15 @@ const AddStudentStep1Phone = () => {
                 />
             </ScrollView>
 
-            {/* Parent Found Modal */}
             <ConfirmationModal
                 visible={showModal}
                 title="Parent Found"
-                message={`We found an existing parent with this phone number:\n\n${foundParent?.name}\n${foundParent?.phoneNumber}\n\nWould you like to use this parent or create a new one?`}
+                message={`We found an existing parent with this email address:\n\n${foundParent?.name}\n${foundParent?.email}\n\nWould you like to use this parent or create a new one?`}
                 confirmText="Use Existing Parent"
                 cancelText="Create New Parent"
                 onConfirm={handleUseExisting}
                 onCancel={handleCreateNew}
+                onClose={handleCloseModal}
                 iconName="user-circle"
                 iconColor={Colors.primary[600]}
             />
@@ -217,4 +236,4 @@ const styles = StyleSheet.create({
     },
 })
 
-export { AddStudentStep1Phone }
+export { AddStudentStep1Email }

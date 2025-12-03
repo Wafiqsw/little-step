@@ -6,7 +6,7 @@ export type MainNavigatorParamList = {
   OnBoarding: undefined;
   Login: undefined;
   Register: undefined;
-  
+
   //Parent Navigation Site
   ParentTabNavigator: undefined;
   AddPickupPerson: undefined;
@@ -31,16 +31,17 @@ export type MainNavigatorParamList = {
   TeacherManageStudent: undefined;
   TeacherAllStudents: undefined;
   TeacherEditStudent: { studentId: number };
-  TeacherAddStudentStep1Phone: undefined;
+  TeacherAddStudentStep1Email: undefined;
   TeacherAddStudentStep2Parent: {
-    phoneNumber: string;
-    existingParent?: import('../data/MockStudentParent').Parent | null;
+    email: string;
+    existingParent?: import('../types/Users').Users | null;
   };
   TeacherAddStudentStep3Student: {
-    phoneNumber: string;
+    email: string;
     parentName: string;
-    parentEmail?: string;
+    parentPhone?: string;
     isExistingParent: boolean;
+    existingParent?: import('../types/Users').Users | null;
   };
 }
 

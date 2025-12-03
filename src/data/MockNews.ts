@@ -26,7 +26,10 @@ export interface Answer {
     answer: string
 }
 
-export const mockNewsData: NewsArticle[] = [
+// Lazy initialization to avoid parsing large data at startup
+let _mockNewsData: NewsArticle[] | null = null;
+
+const initializeMockNewsData = (): NewsArticle[] => [
     {
         id: 1,
         tag: 'urgent',
@@ -510,12 +513,29 @@ Wishing everyone a wonderful and productive holiday!`,
     },
 ]
 
+// Getter function with lazy initialization
+export const getMockNewsData = (): NewsArticle[] => {
+    if (!_mockNewsData) {
+        console.log('📰 Initializing mock news data...');
+        _mockNewsData = initializeMockNewsData();
+    }
+    return _mockNewsData;
+}
+
+// For backwards compatibility - but this will now use lazy loading
+export const mockNewsData = new Proxy([] as NewsArticle[], {
+    get(target, prop) {
+        const data = getMockNewsData();
+        return (data as any)[prop];
+    }
+});
+
 // Helper function to get a single news article by ID
 export const getNewsById = (id: number): NewsArticle | undefined => {
-    return mockNewsData.find(news => news.id === id)
+    return getMockNewsData().find(news => news.id === id)
 }
 
 // Helper function to get news by tag
 export const getNewsByTag = (tag: 'urgent' | 'important' | 'general'): NewsArticle[] => {
-    return mockNewsData.filter(news => news.tag === tag)
+    return getMockNewsData().filter(news => news.tag === tag)
 }

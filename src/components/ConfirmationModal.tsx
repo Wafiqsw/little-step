@@ -21,6 +21,7 @@ export interface ConfirmationModalProps {
   iconColor?: string
   onConfirm: () => void
   onCancel: () => void
+  onClose?: () => void
   containerStyle?: ViewStyle
 }
 
@@ -35,17 +36,36 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   iconColor = '#FF9800',
   onConfirm,
   onCancel,
+  onClose,
   containerStyle,
 }) => {
+  console.log('ConfirmationModal rendering with visible:', visible);
+
+  if (!visible) {
+    return null;
+  }
+
   return (
     <Modal
       visible={visible}
-      transparent
+      transparent={true}
       animationType="fade"
+      statusBarTranslucent={true}
       onRequestClose={onCancel}
     >
-      <View style={styles.overlay}>
+      <View style={styles.overlay}>{console.log('Modal View rendering')}
         <View style={[styles.modalContainer, containerStyle]}>
+          {/* Close Button */}
+          {onClose && (
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={onClose}
+              activeOpacity={0.7}
+            >
+              <Icon name="times" size={20} color={Colors.text.secondary} />
+            </TouchableOpacity>
+          )}
+
           {/* Icon */}
           <View
             style={[
@@ -93,7 +113,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: Colors.overlay.main,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: Spacing.lg,
@@ -106,6 +126,18 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     alignItems: 'center',
     gap: Spacing.md,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: Spacing.md,
+    right: Spacing.md,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.neutral[200],
+    zIndex: 10,
   },
   iconContainer: {
     width: 70,

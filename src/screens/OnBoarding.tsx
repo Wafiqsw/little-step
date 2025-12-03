@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import {
     View,
     Text,
@@ -13,6 +13,7 @@ import { Colors, Typography, Spacing } from '../constants'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../navigation/type'
+import { useAuth } from '../context/AuthProvider'
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 
@@ -23,6 +24,19 @@ type OnBoardingNavigationProp = NativeStackNavigationProp<
 
 const OnBoarding = () => {
     const navigation = useNavigation<OnBoardingNavigationProp>()
+    const { user, userProfile, isInitialized } = useAuth()
+
+    // Auto-navigate when user is authenticated
+    useEffect(() => {
+        if (isInitialized && user && userProfile) {
+            console.log('🚀 Auto-navigating authenticated user, role:', userProfile.role)
+            if (userProfile.role === 'guardian') {
+                navigation.replace('ParentTabNavigator')
+            } else if (userProfile.role === 'teacher') {
+                navigation.replace('TeacherTabNavigator')
+            }
+        }
+    }, [isInitialized, user, userProfile, navigation])
 
     const handleSignUp = () => {
         // Navigate to register screen

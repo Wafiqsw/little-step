@@ -5,6 +5,8 @@ import { Colors, Typography, Spacing } from '../constants'
 import { Logo } from './Logo'
 import { useNavigation } from '@react-navigation/native'
 
+import { useAuth } from '../context/AuthProvider';
+
 export type HeaderVariant = 'default' | 'drawer'
 
 export interface HeaderProps {
@@ -27,6 +29,19 @@ export const Header: React.FC<HeaderProps> = ({
   onBackPress,
 }) => {
   const navigation = useNavigation()
+  const { user, userProfile, isLoading: authLoading } = useAuth();
+
+  // Function to get initials from name
+  const getInitials = (name: string): string => {
+    const words = name.trim().split(' ');
+    if (words.length === 1) {
+      return words[0].charAt(0).toUpperCase();
+    }
+    return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+  };
+
+  // Get initials from userProfile name or use the prop
+  const displayInitial = userProfile?.name ? getInitials(userProfile.name) : avatarInitial;
 
   const handleBackPress = () => {
     if (onBackPress) {
@@ -79,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
         style={styles.avatar}
         activeOpacity={0.7}
       >
-        <Text style={styles.avatarText}>{avatarInitial}</Text>
+        <Text style={styles.avatarText}>{displayInitial}</Text>
       </TouchableOpacity>
     </View>
   )

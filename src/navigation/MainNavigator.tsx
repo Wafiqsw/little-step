@@ -1,18 +1,20 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from './type';
-import { Playground, OnBoarding, Login, Register, ParentAddPickupPerson, ParentArchivePickupPerson, ParentNewsfeedBlog, ParentProfile, ParentAttendanceProgress, ParentManageProfile, ParentManageSecurity, ParentChangePassword, TeacherProfile, TeacherManageSecurity, TeacherChangePassword, TeacherCreateFeed, TeacherNewsfeedBlog, TeacherMyPostsList, TeacherAllAnnouncementsList, TeacherManageStudents, TeacherAllStudents, TeacherEditStudent, TeacherAddStudentStep1Phone, TeacherAddStudentStep2Parent, TeacherAddStudentStep3Student } from '../screens';
+import { Playground, OnBoarding, Login, Register, ParentAddPickupPerson, ParentArchivePickupPerson, ParentNewsfeedBlog, ParentProfile, ParentAttendanceProgress, ParentManageProfile, ParentManageSecurity, ParentChangePassword, TeacherProfile, TeacherManageSecurity, TeacherChangePassword, TeacherCreateFeed, TeacherNewsfeedBlog, TeacherMyPostsList, TeacherAllAnnouncementsList, TeacherManageStudents, TeacherAllStudents, TeacherEditStudent, TeacherAddStudentStep1Email, TeacherAddStudentStep2Parent, TeacherAddStudentStep3Student } from '../screens';
 import { ParentTabNavigator } from './ParentTabNavigator';
 import { TeacherTabNavigator } from './TeacherTabNavigator';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { useAuth } from '../context/AuthProvider';
 
 const Stack = createNativeStackNavigator<MainNavigatorParamList>();
 
 const MainNavigator = () => {
   return (
-    <Stack.Navigator initialRouteName='OnBoarding' screenOptions={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName="OnBoarding" screenOptions={{ headerShown: false }}>
       <Stack.Screen component={Playground} name='Playground' />
-      
 
       <Stack.Screen component={OnBoarding} name='OnBoarding' />
       <Stack.Screen component={Login} name='Login' />
@@ -43,7 +45,7 @@ const MainNavigator = () => {
       <Stack.Screen component={TeacherManageStudents} name='TeacherManageStudent' />
       <Stack.Screen component={TeacherAllStudents} name='TeacherAllStudents' />
       <Stack.Screen component={TeacherEditStudent} name='TeacherEditStudent' />
-      <Stack.Screen component={TeacherAddStudentStep1Phone} name='TeacherAddStudentStep1Phone' />
+      <Stack.Screen component={TeacherAddStudentStep1Email} name='TeacherAddStudentStep1Email' />
       <Stack.Screen component={TeacherAddStudentStep2Parent} name='TeacherAddStudentStep2Parent' />
       <Stack.Screen component={TeacherAddStudentStep3Student} name='TeacherAddStudentStep3Student' />
 

@@ -15,6 +15,11 @@ import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 
+
+import { loginUser } from '../../firebase/auth'
+import { getDataById } from '../../firebase/firestore'
+import { Users } from '../../types/Users'
+
 type LoginNavigationProp = NativeStackNavigationProp<
     MainNavigatorParamList,
     'Login'
@@ -33,9 +38,75 @@ const Login = () => {
         password: '',
     })
 
-    const handleLogin = () => {
-        // Validate and login
-        console.log('Login:', formData)
+    const handleLogin = async () => {
+        try {
+            // Basic validation
+            if (!formData.email || !formData.password) {
+                console.log('❌ Login Failed: Please fill in all fields')
+                setErrors({
+                    email: !formData.email ? 'Email is required' : '',
+                    password: !formData.password ? 'Password is required' : '',
+                })
+                return
+            }
+
+            console.log('🔄 Attempting login for:', formData.email)
+
+            // Firebase login
+            const userCredential = await loginUser(formData.email, formData.password)
+            const uid = userCredential.user.uid;
+
+            console.log('✅ Login Success!')
+            console.log('User ID:', userCredential.user.uid)
+            console.log('Email:', userCredential.user.email)
+            console.log('User Data:', userCredential.user)
+
+            const userProfile = await getDataById<Users>("users",uid)
+            console.log('User Info', JSON.stringify(userProfile))
+
+
+            // Navigate based on user role
+            if (userProfile) {
+                if (userProfile.role === 'guardian') {
+                    console.log('🔄 Navigating to Parent Tab Navigator')
+                    navigation.replace('ParentTabNavigator')
+                } else if (userProfile.role === 'teacher') {
+                    console.log('🔄 Navigating to Teacher Tab Navigator')
+                    navigation.replace('TeacherTabNavigator')
+                } else {
+                    console.log('⚠️ Unknown role:', userProfile.role)
+                }
+            } else {
+                console.log('⚠️ No user profile found in Firestore')
+                setErrors({ ...errors, email: 'User profile not found. Please contact support.' })
+            }
+
+        } catch (error: any) {
+            console.log('❌ Login Failed!')
+            console.log('Error Code:', error.code)
+            console.log('Error Message:', error.message)
+
+            // Handle specific Firebase errors
+            let errorMessage = 'An error occurred during login'
+
+            if (error.code === 'auth/invalid-email') {
+                errorMessage = 'Invalid email address'
+                setErrors({ ...errors, email: errorMessage })
+            } else if (error.code === 'auth/user-not-found') {
+                errorMessage = 'No account found with this email'
+                setErrors({ ...errors, email: errorMessage })
+            } else if (error.code === 'auth/wrong-password') {
+                errorMessage = 'Incorrect password'
+                setErrors({ ...errors, password: errorMessage })
+            } else if (error.code === 'auth/invalid-credential') {
+                errorMessage = 'Invalid email or password'
+                setErrors({ ...errors, email: errorMessage })
+            } else {
+                setErrors({ ...errors, email: errorMessage })
+            }
+
+            console.log('Displayed Error:', errorMessage)
+        }
     }
 
     const handleRegister = () => {

@@ -30,7 +30,7 @@ const ManageStudents = () => {
   }
 
   const handleAddStudent = () => {
-    navigation.navigate('TeacherAddStudentStep1Phone')
+    navigation.navigate('TeacherAddStudentStep1Email')
   }
 
   const handleEditStudent = (studentId: number) => {

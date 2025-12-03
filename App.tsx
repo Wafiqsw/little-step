@@ -11,7 +11,8 @@ import {
 } from 'react-native-safe-area-context';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import MainNavigator from './src/navigation/MainNavigator';
-import { ErrorBoundary, SplashScreen } from './src/components';
+import { ErrorBoundary } from './src/components';
+import { AuthProvider } from './src/context/AuthProvider';
 
 const AppTheme = {
   ...DefaultTheme,
@@ -25,13 +26,13 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <React.Suspense fallback={<SplashScreen />}>
-        <SafeAreaProvider>
+      <SafeAreaProvider>
+        <AuthProvider>
           <NavigationContainer theme={AppTheme}>
             <MainNavigator />
           </NavigationContainer>
-        </SafeAreaProvider>
-      </React.Suspense>
+        </AuthProvider>
+      </SafeAreaProvider>
     </ErrorBoundary>
   );
 }
