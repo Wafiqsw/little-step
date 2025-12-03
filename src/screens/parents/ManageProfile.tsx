@@ -1,19 +1,22 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TextInput,
+  ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, Button, SuccessModal } from '../../components'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
-import { mockParentData } from '../../data/MockParent'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import Icon from 'react-native-vector-icons/FontAwesome'
+import { auth } from '../../firebase'
+import { getDataById, updateData } from '../../firebase/firestore'
+import { Users } from '../../types/Users'
 
 type ManageProfileNavigationProp = NativeStackNavigationProp<
   MainNavigatorParamList,
@@ -23,24 +26,83 @@ type ManageProfileNavigationProp = NativeStackNavigationProp<
 const ManageProfile = () => {
   const navigation = useNavigation<ManageProfileNavigationProp>()
 
-  // Initialize state with mock data
+  // Initialize state with Users type fields
   const [formData, setFormData] = useState({
-    name: mockParentData.name,
-    email: mockParentData.email,
-    phone: mockParentData.phone,
-    emergencyContact: mockParentData.emergencyContact,
+    name: '',
+    email: '',
+    numphone: '',
+    ic: '',
+    address: '',
+    occupation: '',
   })
+  const [isLoading, setIsLoading] = useState(false)
+  const [isFetching, setIsFetching] = useState(true)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+
+  // Fetch user data on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const currentUser = auth.currentUser
+        if (!currentUser) {
+          console.error('No authenticated user found')
+          setIsFetching(false)
+          return
+        }
+
+        const userData = await getDataById<Users>('users', currentUser.uid)
+        if (userData) {
+          setFormData({
+            name: userData.name || '',
+            email: userData.email || '',
+            numphone: userData.numphone || '',
+            ic: userData.ic || '',
+            address: userData.address || '',
+            occupation: userData.occupation || '',
+          })
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error)
+      } finally {
+        setIsFetching(false)
+      }
+    }
+
+    fetchUserData()
+  }, [])
 
   const handleAvatarPress = () => {
     navigation.navigate('ParentProfile')
   }
 
-  const handleSave = () => {
-    // Here you would typically save to backend/state management
-    console.log('Saving profile data:', formData)
-    // Show success modal
-    setShowSuccessModal(true)
+  const handleSave = async () => {
+    try {
+      setIsLoading(true)
+      const currentUser = auth.currentUser
+
+      if (!currentUser) {
+        console.error('No authenticated user found')
+        return
+      }
+
+      // Update user data in Firestore
+      await updateData('users', currentUser.uid, {
+        name: formData.name,
+        numphone: formData.numphone,
+        ic: formData.ic,
+        address: formData.address,
+        occupation: formData.occupation,
+        // Email is not updated here (should use Firebase Auth to change email)
+      })
+
+      console.log('Profile updated successfully')
+      setShowSuccessModal(true)
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      // You might want to show an error modal here
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleSuccessClose = () => {
@@ -55,6 +117,19 @@ const ManageProfile = () => {
       return `${names[0][0]}${names[1][0]}`.toUpperCase()
     }
     return name[0]?.toUpperCase() || 'U'
+  }
+
+  // Show loading state while fetching data
+  if (isFetching) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header showBackButton onAvatarPress={handleAvatarPress} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#371B34" />
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
+      </SafeAreaView>
+    )
   }
 
   return (
@@ -95,10 +170,10 @@ const ManageProfile = () => {
             </View>
           </View>
 
-          {/* Email */}
+          {/* Email - Read Only */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email Address</Text>
-            <View style={styles.inputContainer}>
+            <View style={[styles.inputContainer, styles.inputDisabled]}>
               <Icon
                 name="envelope"
                 size={16}
@@ -106,15 +181,14 @@ const ManageProfile = () => {
                 style={styles.inputIcon}
               />
               <TextInput
-                style={styles.input}
+                style={[styles.input, styles.inputTextDisabled]}
                 value={formData.email}
-                onChangeText={text => setFormData({ ...formData, email: text })}
-                placeholder="Enter your email"
+                placeholder="Email address"
                 placeholderTextColor={Colors.text.disabled}
-                keyboardType="email-address"
-                autoCapitalize="none"
+                editable={false}
               />
             </View>
+            <Text style={styles.helperText}>Email cannot be changed</Text>
           </View>
 
           {/* Phone Number */}
@@ -129,8 +203,8 @@ const ManageProfile = () => {
               />
               <TextInput
                 style={styles.input}
-                value={formData.phone}
-                onChangeText={text => setFormData({ ...formData, phone: text })}
+                value={formData.numphone}
+                onChangeText={text => setFormData({ ...formData, numphone: text })}
                 placeholder="Enter your phone number"
                 placeholderTextColor={Colors.text.disabled}
                 keyboardType="phone-pad"
@@ -138,25 +212,64 @@ const ManageProfile = () => {
             </View>
           </View>
 
-          {/* Emergency Contact */}
+          {/* IC Number */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Emergency Contact</Text>
+            <Text style={styles.label}>IC Number</Text>
             <View style={styles.inputContainer}>
               <Icon
-                name="phone-square"
-                size={18}
+                name="id-card"
+                size={16}
                 color={Colors.text.secondary}
                 style={styles.inputIcon}
               />
               <TextInput
                 style={styles.input}
-                value={formData.emergencyContact}
-                onChangeText={text =>
-                  setFormData({ ...formData, emergencyContact: text })
-                }
-                placeholder="Enter emergency contact number"
+                value={formData.ic}
+                onChangeText={text => setFormData({ ...formData, ic: text })}
+                placeholder="Enter your IC number"
                 placeholderTextColor={Colors.text.disabled}
-                keyboardType="phone-pad"
+              />
+            </View>
+          </View>
+
+          {/* Address */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Address</Text>
+            <View style={[styles.inputContainer, styles.textAreaContainer]}>
+              <Icon
+                name="home"
+                size={18}
+                color={Colors.text.secondary}
+                style={[styles.inputIcon, styles.textAreaIcon]}
+              />
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={formData.address}
+                onChangeText={text => setFormData({ ...formData, address: text })}
+                placeholder="Enter your address"
+                placeholderTextColor={Colors.text.disabled}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+          </View>
+
+          {/* Occupation */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Occupation</Text>
+            <View style={styles.inputContainer}>
+              <Icon
+                name="briefcase"
+                size={16}
+                color={Colors.text.secondary}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                value={formData.occupation}
+                onChangeText={text => setFormData({ ...formData, occupation: text })}
+                placeholder="Enter your occupation"
+                placeholderTextColor={Colors.text.disabled}
               />
             </View>
           </View>
@@ -164,11 +277,12 @@ const ManageProfile = () => {
 
         {/* Save Button */}
         <Button
-          label="Save Changes"
+          label={isLoading ? "Saving..." : "Save Changes"}
           onPress={handleSave}
           variant="primary"
           size="large"
           fullWidth
+          disabled={isLoading}
         />
 
         {/* Info Note */}
@@ -197,6 +311,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.white,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  loadingText: {
+    fontSize: Typography.body.medium.fontSize as number,
+    color: Colors.text.secondary,
   },
   scrollContent: {
     padding: Spacing.md,
@@ -258,6 +382,31 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: Colors.black,
     padding: 0,
+  },
+  inputDisabled: {
+    backgroundColor: Colors.neutral[100],
+  },
+  inputTextDisabled: {
+    color: Colors.text.secondary,
+  },
+  helperText: {
+    fontSize: Typography.body.small.fontSize as number,
+    color: Colors.text.secondary,
+    marginTop: 4,
+  },
+  textAreaContainer: {
+    height: 'auto',
+    minHeight: 100,
+    alignItems: 'flex-start',
+    paddingVertical: Spacing.sm,
+  },
+  textAreaIcon: {
+    marginTop: 4,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+    paddingTop: 0,
   },
   infoNote: {
     flexDirection: 'row',

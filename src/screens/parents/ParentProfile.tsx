@@ -1,12 +1,17 @@
-import React, { useState } from 'react'
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import React, { useState, useCallback } from 'react'
+import { ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, NavigationCard, Avatar, ConfirmationModal } from '../../components'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import { logoutUser } from '../../firebase/auth'
+import { collection, query, where, getDocs, doc } from 'firebase/firestore'
+import { db, auth } from '../../firebase'
+import { Student } from '../../types/Student'
+import { Users } from '../../types/Users'
+import { getDataById } from '../../firebase/firestore'
 
 import { useAuth } from '../../context/AuthProvider';
 
@@ -17,11 +22,78 @@ type ParentProfileNavigationProp = NativeStackNavigationProp<
 
 const ParentProfile = () => {
   const navigation = useNavigation<ParentProfileNavigationProp>()
-  const { user, userProfile, isLoading: authLoading } = useAuth();
-  
+  const { userProfile, setUserProfile } = useAuth();
+
+  // State for children/students
+  const [children, setChildren] = useState<(Student & { id: string })[]>([])
+  const [isLoadingChildren, setIsLoadingChildren] = useState(true)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false)
 
   // Logout confirmation modal state
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+
+  // Fetch user profile data
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      setIsLoadingProfile(true)
+      const currentUser = auth.currentUser
+      if (!currentUser) {
+        console.error('No authenticated user found')
+        return
+      }
+
+      const userData = await getDataById<Users>('users', currentUser.uid)
+      if (userData && setUserProfile) {
+        setUserProfile(userData)
+        console.log('✅ User profile refreshed')
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error)
+    } finally {
+      setIsLoadingProfile(false)
+    }
+  }, [setUserProfile])
+
+  // Fetch children
+  const fetchChildren = useCallback(async () => {
+    try {
+      setIsLoadingChildren(true)
+      const currentUser = auth.currentUser
+      if (!currentUser) {
+        console.error('No authenticated user found')
+        return
+      }
+
+      // Create reference to current user document
+      const guardianRef = doc(db, 'users', currentUser.uid)
+
+      // Query students where guardian equals current user reference
+      const studentsRef = collection(db, 'students')
+      const studentsQuery = query(studentsRef, where('guardian', '==', guardianRef))
+      const studentsSnapshot = await getDocs(studentsQuery)
+
+      const childrenData = studentsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as (Student & { id: string })[]
+
+      setChildren(childrenData)
+      console.log(`✅ Found ${childrenData.length} children`)
+    } catch (error) {
+      console.error('Error fetching children:', error)
+    } finally {
+      setIsLoadingChildren(false)
+    }
+  }, [])
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 ParentProfile screen focused - refreshing data')
+      fetchUserProfile()
+      fetchChildren()
+    }, [fetchUserProfile, fetchChildren])
+  )
 
   // Navigation handler
   const handleAvatarPress = () => {
@@ -60,77 +132,106 @@ const ParentProfile = () => {
         <Text style={styles.pageTitle}>Profile</Text>
 
         {/* Profile Section */}
-        <View style={styles.profileSection}>
-          <Avatar name={userProfile!.name} size={100} />
-          <Text style={styles.userName}>{userProfile!.name}</Text>
-          <Text style={styles.userEmail}>{userProfile!.email}</Text>
-        </View>
-
-        {/* Account Information Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Information</Text>
-
-          <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Full Name</Text>
-              <Text style={styles.infoValue}>{userProfile!.name}</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Email</Text>
-              <Text style={styles.infoValue}>{userProfile!.email}</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Phone Number</Text>
-              <Text style={styles.infoValue}>{userProfile!.numphone}</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Occupation</Text>
-              <Text style={styles.infoValue}>{userProfile!.occupation}</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Address</Text>
-              <Text style={styles.infoValue}>{userProfile!.address}</Text>
-            </View>
-
+        {isLoadingProfile ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#371B34" />
+            <Text style={styles.loadingText}>Refreshing profile...</Text>
           </View>
-        </View>
+        ) : userProfile ? (
+          <>
+            <View style={styles.profileSection}>
+              <Avatar name={userProfile.name || 'User'} size={100} />
+              <Text style={styles.userName}>{userProfile.name || 'User'}</Text>
+              <Text style={styles.userEmail}>{userProfile.email || ''}</Text>
+            </View>
+
+            {/* Account Information Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Account Information</Text>
+
+              <View style={styles.infoCard}>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Full Name</Text>
+                  <Text style={styles.infoValue}>{userProfile.name || 'Not set'}</Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Email</Text>
+                  <Text style={styles.infoValue}>{userProfile.email || 'Not set'}</Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Phone Number</Text>
+                  <Text style={styles.infoValue}>{userProfile.numphone || 'Not set'}</Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>IC Number</Text>
+                  <Text style={styles.infoValue}>{userProfile.ic || 'Not set'}</Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Occupation</Text>
+                  <Text style={styles.infoValue}>{userProfile.occupation || 'Not set'}</Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Address</Text>
+                  <Text style={styles.infoValue}>{userProfile.address || 'Not set'}</Text>
+                </View>
+
+              </View>
+            </View>
+          </>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>Unable to load profile</Text>
+          </View>
+        )}
 
         {/* Children Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>My Children</Text>
 
-{/*}
-          <View style={styles.childrenList}>
-            {userData.children.map((child, index) => (
-              <View key={child.id}>
-                <View style={styles.childCard}>
-                  <Avatar name={child.name} size={50} />
-                  <View style={styles.childInfo}>
-                    <Text style={styles.childName}>{child.name}</Text>
-                    <Text style={styles.childDetails}>
-                      {child.age} years old • {child.class}
-                    </Text>
+          {isLoadingChildren ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#371B34" />
+              <Text style={styles.loadingText}>Loading children...</Text>
+            </View>
+          ) : children.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No children registered yet</Text>
+            </View>
+          ) : (
+            <View style={styles.childrenList}>
+              {children.map((child, index) => (
+                <View key={child.id}>
+                  <View style={styles.childCard}>
+                    <Avatar name={child.name} size={50} />
+                    <View style={styles.childInfo}>
+                      <Text style={styles.childName}>{child.name}</Text>
+                      <Text style={styles.childDetails}>
+                        {child.age} years old • {child.gender === 'male' ? 'Male' : 'Female'}
+                      </Text>
+                    </View>
                   </View>
+                  {index < children.length - 1 && (
+                    <View style={styles.divider} />
+                  )}
                 </View>
-                {index < userData.children.length - 1 && (
-                  <View style={styles.divider} />
-                )}
-              </View>
-            ))}
-          </View>
-{*/}
+              ))}
+            </View>
+          )}
 
         </View>
 
@@ -280,6 +381,33 @@ const styles = StyleSheet.create({
     fontSize: Typography.body.small.fontSize as number,
     fontWeight: '400',
     color: Colors.text.secondary,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  loadingText: {
+    fontSize: Typography.body.medium.fontSize as number,
+    color: Colors.text.secondary,
+  },
+  emptyState: {
+    padding: Spacing.lg,
+    backgroundColor: Colors.neutral[50],
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateText: {
+    fontSize: Typography.body.medium.fontSize as number,
+    color: Colors.text.secondary,
+    textAlign: 'center',
   },
 })
 

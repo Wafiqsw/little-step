@@ -15,9 +15,14 @@ interface AvatarProps {
 const Avatar = ({ name, size = 60, style }: AvatarProps) => {
     // Extract initials from name
     const getInitials = (fullName: string): string => {
+        // Handle null, undefined, or empty name
+        if (!fullName || typeof fullName !== 'string' || fullName.trim().length === 0) {
+            return 'U' // Default to 'U' for User
+        }
+
         const names = fullName.trim().split(' ')
 
-        if (names.length === 0) return '??'
+        if (names.length === 0) return 'U'
 
         // Get first letter of first name
         const firstInitial = names[0]?.[0]?.toUpperCase() || ''
@@ -27,7 +32,7 @@ const Avatar = ({ name, size = 60, style }: AvatarProps) => {
             ? names[names.length - 1]?.[0]?.toUpperCase() || ''
             : ''
 
-        return firstInitial + lastInitial
+        return firstInitial + lastInitial || 'U'
     }
 
     const initials = getInitials(name)

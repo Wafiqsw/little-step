@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useRef } from 'react'
 import {
     View,
     Text,
@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import LinearGradient from 'react-native-linear-gradient'
 import { Logo, WhiteCloud, Button, Hyperlink } from '../components'
 import { Colors, Typography, Spacing } from '../constants'
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../navigation/type'
 import { useAuth } from '../context/AuthProvider'
@@ -25,18 +25,23 @@ type OnBoardingNavigationProp = NativeStackNavigationProp<
 const OnBoarding = () => {
     const navigation = useNavigation<OnBoardingNavigationProp>()
     const { user, userProfile, isInitialized } = useAuth()
+    const hasNavigated = useRef(false)
 
-    // Auto-navigate when user is authenticated
-    useEffect(() => {
-        if (isInitialized && user && userProfile && userProfile.role) {
-            console.log('🚀 Auto-navigating authenticated user, role:', userProfile.role)
-            if (userProfile.role === 'guardian') {
-                navigation.replace('ParentTabNavigator')
-            } else if (userProfile.role === 'teacher') {
-                navigation.replace('TeacherTabNavigator')
+    // Auto-navigate when user is authenticated - ONLY when OnBoarding screen is focused
+    useFocusEffect(
+        React.useCallback(() => {
+            if (isInitialized && user && userProfile && userProfile.role && !hasNavigated.current) {
+                console.log('🚀 Auto-navigating authenticated user from OnBoarding, role:', userProfile.role)
+                hasNavigated.current = true
+
+                if (userProfile.role === 'guardian') {
+                    navigation.replace('ParentTabNavigator')
+                } else if (userProfile.role === 'teacher') {
+                    navigation.replace('TeacherTabNavigator')
+                }
             }
-        }
-    }, [isInitialized, user, userProfile, navigation])
+        }, [isInitialized, user, userProfile, navigation])
+    )
 
     const handleSignUp = () => {
         // Navigate to register screen
