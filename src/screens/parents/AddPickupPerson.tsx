@@ -6,19 +6,20 @@ import { Typography, Colors, Spacing } from '../../constants'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
+import { doc } from 'firebase/firestore'
+import { db, auth } from '../../firebase'
+import { createData } from '../../firebase/firestore'
 
 type AddPickupPersonNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'AddPickupPerson'>
 
 interface FormData {
-  firstName: string
-  lastName: string
+  name: string
   phoneNumber: string
   relationship: string
 }
 
 interface FormErrors {
-  firstName?: string
-  lastName?: string
+  name?: string
   phoneNumber?: string
   relationship?: string
 }
@@ -26,13 +27,13 @@ interface FormErrors {
 const AddPickupPerson = () => {
   const navigation = useNavigation<AddPickupPersonNavigationProp>()
   const [formData, setFormData] = useState<FormData>({
-    firstName: '',
-    lastName: '',
+    name: '',
     phoneNumber: '',
     relationship: '',
   })
   const [errors, setErrors] = useState<FormErrors>({})
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   const handleAvatarPress = () => {
     navigation.navigate('ParentProfile')
@@ -41,12 +42,8 @@ const AddPickupPerson = () => {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
 
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required'
-    }
-
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required'
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required'
     }
 
     if (!formData.phoneNumber.trim()) {
@@ -63,18 +60,46 @@ const AddPickupPerson = () => {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (validateForm()) {
-      // Save the pickup person data
-      console.log('Saving pickup person:', formData)
-      setShowSuccessModal(true)
+      try {
+        setIsSaving(true)
+        const currentUser = auth.currentUser
+
+        if (!currentUser) {
+          console.error('No authenticated user found')
+          return
+        }
+
+        // Create reference to current user
+        const userRef = doc(db, 'users', currentUser.uid)
+
+        // Create authorized person data
+        const authorizedPersonData = {
+          name: formData.name.trim(),
+          numphone: formData.phoneNumber.trim(),
+          relationship: formData.relationship.trim(),
+          age: 0, // Default age
+          archived: false,
+          assigned_by: userRef,
+        }
+
+        // Save to Firestore
+        await createData('authorised_person', authorizedPersonData)
+
+        console.log('✅ Pickup person added successfully')
+        setShowSuccessModal(true)
+      } catch (error) {
+        console.error('❌ Error adding pickup person:', error)
+      } finally {
+        setIsSaving(false)
+      }
     }
   }
 
   const handleClearAll = () => {
     setFormData({
-      firstName: '',
-      lastName: '',
+      name: '',
       phoneNumber: '',
       relationship: '',
     })
@@ -98,28 +123,16 @@ const AddPickupPerson = () => {
         <View style={styles.pickupBox}>
             <Text style={styles.sectionTitle}>Personal Info</Text>
             <Form
-                label="First Name"
+                label="Name"
                 variant="simple"
-                placeholder="Enter first name"
+                placeholder="Enter full name"
                 keyboardType="default"
-                value={formData.firstName}
+                value={formData.name}
                 onChangeText={(text) => {
-                  setFormData({ ...formData, firstName: text })
-                  if (errors.firstName) setErrors({ ...errors, firstName: '' })
+                  setFormData({ ...formData, name: text })
+                  if (errors.name) setErrors({ ...errors, name: '' })
                 }}
-                error={errors.firstName}
-            />
-            <Form
-                label="Last Name"
-                variant="simple"
-                placeholder="Enter last name"
-                keyboardType="default"
-                value={formData.lastName}
-                onChangeText={(text) => {
-                  setFormData({ ...formData, lastName: text })
-                  if (errors.lastName) setErrors({ ...errors, lastName: '' })
-                }}
-                error={errors.lastName}
+                error={errors.name}
             />
             <Form
                 label="Phone Number"
@@ -150,9 +163,10 @@ const AddPickupPerson = () => {
         <View style={styles.buttonContainer}>
             <View style={styles.primaryButtonWrapper}>
                 <Button
-                    label="Save Profile"
+                    label={isSaving ? "Saving..." : "Save Profile"}
                     onPress={handleSave}
                     variant="primary"
+                    disabled={isSaving}
                 />
             </View>
             <View style={styles.secondaryButtonWrapper}>
@@ -160,6 +174,7 @@ const AddPickupPerson = () => {
                     label="Clear All"
                     onPress={handleClearAll}
                     variant="secondary"
+                    disabled={isSaving}
                 />
             </View>
       </View>
@@ -170,7 +185,7 @@ const AddPickupPerson = () => {
         <SuccessModal
           visible={showSuccessModal}
           title="Pickup Person Added!"
-          message={`${formData.firstName} ${formData.lastName} has been successfully added as a pickup person.`}
+          message={`${formData.name} has been successfully added as a pickup person.`}
           onClose={handleSuccessModalClose}
         />
     </SafeAreaView>

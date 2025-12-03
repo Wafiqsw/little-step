@@ -1,65 +1,171 @@
-import { View, Text, ScrollView, StyleSheet } from 'react-native'
-import React, { useState } from 'react'
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
+import React, { useState, useCallback } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, GuardianCard, Button, SuccessModal, ConfirmationModal } from '../../components'
 import { Spacing, Typography, Colors } from '../../constants'
-import { getActiveParents, getActivePickupPersons } from '../../data/MockGuardian'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
+import { collection, query, where, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { db, auth } from '../../firebase'
+import { AuthorisedPerson } from '../../types/AuthorisedPerson'
+import { useAuth } from '../../context/AuthProvider'
 
 type PickupListNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'ParentTabNavigator'>
 
 const PickupList = () => {
 
   const navigation = useNavigation<PickupListNavigationProp>();
+  const { userProfile } = useAuth();
 
-  const parents = getActiveParents()
-  const pickupPersons = getActivePickupPersons()
-
+  const [authorisedPersons, setAuthorisedPersons] = useState<(AuthorisedPerson & { id: string })[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [showArchiveModal, setShowArchiveModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [selectedGuardianId, setSelectedGuardianId] = useState<number | null>(null)
+  const [selectedGuardianId, setSelectedGuardianId] = useState<string | null>(null)
   const [selectedGuardianName, setSelectedGuardianName] = useState('')
 
-  const handleSave = (id: number, data: { firstName: string; lastName: string; phoneNumber: string; relationship: string }) => {
-    console.log('Save guardian:', id, data)
-    // TODO: Implement save logic
-    setSuccessMessage(`${data.firstName} ${data.lastName}'s information has been updated successfully!`)
-    setShowSuccessModal(true)
+  // Fetch authorized persons from Firestore
+  const fetchAuthorisedPersons = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const currentUser = auth.currentUser
+
+      if (!currentUser) {
+        console.error('No authenticated user found')
+        setIsLoading(false)
+        return
+      }
+
+      // Create reference to current user
+      const userRef = doc(db, 'users', currentUser.uid)
+
+      // Query authorized persons where assigned_by equals current user and not archived
+      const authorisedRef = collection(db, 'authorised_person')
+      const authorisedQuery = query(
+        authorisedRef,
+        where('assigned_by', '==', userRef),
+        where('archived', '==', false)
+      )
+      const authorisedSnapshot = await getDocs(authorisedQuery)
+
+      const authorisedData = authorisedSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as (AuthorisedPerson & { id: string })[]
+
+      setAuthorisedPersons(authorisedData)
+      console.log(`✅ Fetched ${authorisedData.length} authorized persons`)
+    } catch (error) {
+      console.error('Error fetching authorized persons:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 PickupList screen focused - fetching data')
+      fetchAuthorisedPersons()
+    }, [fetchAuthorisedPersons])
+  )
+
+  const handleSave = async (id: string, data: { name: string; phoneNumber: string; relationship: string }) => {
+    try {
+      setIsSaving(true)
+
+      // Update document in Firestore
+      await updateDoc(doc(db, 'authorised_person', id), {
+        name: data.name.trim(),
+        relationship: data.relationship.trim(),
+        numphone: data.phoneNumber.trim(),
+      })
+
+      console.log('✅ Guardian updated successfully:', id)
+
+      // Refresh the list to show updated data
+      await fetchAuthorisedPersons()
+
+      setSuccessMessage(`${data.name}'s information has been updated successfully!`)
+      setShowSuccessModal(true)
+    } catch (error) {
+      console.error('❌ Error updating guardian:', error)
+      setSuccessMessage('Failed to update guardian. Please try again.')
+      setShowSuccessModal(true)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const handleArchiveClick = (id: number, name: string) => {
+  const handleArchiveClick = (id: string, name: string) => {
     setSelectedGuardianId(id)
     setSelectedGuardianName(name)
     setShowArchiveModal(true)
   }
 
-  const handleArchiveConfirm = () => {
+  const handleArchiveConfirm = async () => {
     if (selectedGuardianId) {
-      console.log('Archive guardian:', selectedGuardianId)
-      // TODO: Implement archive logic
-      setShowArchiveModal(false)
-      setSuccessMessage(`${selectedGuardianName} has been archived successfully!`)
-      setShowSuccessModal(true)
+      try {
+        setIsSaving(true)
+
+        // Update archived field to true
+        await updateDoc(doc(db, 'authorised_person', selectedGuardianId), {
+          archived: true
+        })
+
+        console.log('✅ Guardian archived successfully:', selectedGuardianId)
+
+        // Refresh the list to show updated data
+        await fetchAuthorisedPersons()
+
+        setShowArchiveModal(false)
+        setSuccessMessage(`${selectedGuardianName} has been archived successfully!`)
+        setShowSuccessModal(true)
+      } catch (error) {
+        console.error('❌ Error archiving guardian:', error)
+        setShowArchiveModal(false)
+        setSuccessMessage('Failed to archive guardian. Please try again.')
+        setShowSuccessModal(true)
+      } finally {
+        setIsSaving(false)
+      }
     }
   }
 
-  const handleDeleteClick = (id: number, name: string) => {
+  const handleDeleteClick = (id: string, name: string) => {
     setSelectedGuardianId(id)
     setSelectedGuardianName(name)
     setShowDeleteModal(true)
   }
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (selectedGuardianId) {
-      console.log('Delete guardian:', selectedGuardianId)
-      // TODO: Implement delete logic
-      setShowDeleteModal(false)
-      setSuccessMessage(`${selectedGuardianName} has been deleted successfully!`)
-      setShowSuccessModal(true)
+      try {
+        setIsSaving(true)
+
+        // Delete document from Firestore
+        await deleteDoc(doc(db, 'authorised_person', selectedGuardianId))
+
+        console.log('✅ Guardian deleted successfully:', selectedGuardianId)
+
+        // Refresh the list to show updated data
+        await fetchAuthorisedPersons()
+
+        setShowDeleteModal(false)
+        setSuccessMessage(`${selectedGuardianName} has been deleted successfully!`)
+        setShowSuccessModal(true)
+      } catch (error) {
+        console.error('❌ Error deleting guardian:', error)
+        setShowDeleteModal(false)
+        setSuccessMessage('Failed to delete guardian. Please try again.')
+        setShowSuccessModal(true)
+      } finally {
+        setIsSaving(false)
+      }
     }
   }
 
@@ -76,44 +182,76 @@ const PickupList = () => {
       >
         <Text style={styles.dashboardTitle}>Guardian List</Text>
 
+        {/* Parent Section - Show fathers and mothers only */}
         <Text style={styles.sectionTitle}>Parent</Text>
 
-        {parents.length > 0 ? (
-          parents.map((parent) => (
-            <GuardianCard
-              key={parent.id}
-              name={parent.fullName}
-              relationship={parent.relationship}
-              phoneNumber={parent.phoneNumber}
-              variant={parent.variant}
-              onSave={(data) => handleSave(parent.id, data)}
-              onArchive={() => handleArchiveClick(parent.id, parent.fullName)}
-              onDelete={() => handleDeleteClick(parent.id, parent.fullName)}
-            />
-          ))
+        {isLoading || isSaving ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#371B34" />
+            <Text style={styles.loadingText}>
+              {isLoading ? 'Loading parents...' : 'Saving changes...'}
+            </Text>
+          </View>
+        ) : authorisedPersons.filter((person) =>
+            person.relationship.toLowerCase() === 'mother' ||
+            person.relationship.toLowerCase() === 'father'
+          ).length > 0 ? (
+          authorisedPersons
+            .filter((person) =>
+              person.relationship.toLowerCase() === 'mother' ||
+              person.relationship.toLowerCase() === 'father'
+            )
+            .map((person) => (
+              <GuardianCard
+                key={person.id}
+                name={person.name}
+                relationship={person.relationship}
+                phoneNumber={typeof person.numphone === 'string' ? person.numphone : '-'}
+                variant="parent"
+                onSave={(data) => handleSave(person.id, data)}
+                onArchive={() => handleArchiveClick(person.id, person.name)}
+                onDelete={() => handleDeleteClick(person.id, person.name)}
+              />
+            ))
         ) : (
           <Text style={styles.emptyText}>No parents added yet</Text>
         )}
 
         <View style={styles.divider} />
 
+        {/* Pick Up Person Section - Fetch from Firestore (excluding mothers and fathers) */}
         <Text style={styles.sectionTitle}>Pick Up Person</Text>
 
-        {pickupPersons.length > 0 ? (
-          pickupPersons.map((person) => (
-            <GuardianCard
-              key={person.id}
-              name={person.fullName}
-              relationship={person.relationship}
-              phoneNumber={person.phoneNumber}
-              variant={person.variant}
-              onSave={(data) => handleSave(person.id, data)}
-              onArchive={() => handleArchiveClick(person.id, person.fullName)}
-              onDelete={() => handleDeleteClick(person.id, person.fullName)}
-            />
-          ))
+        {isLoading || isSaving ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#371B34" />
+            <Text style={styles.loadingText}>
+              {isLoading ? 'Loading pickup persons...' : 'Saving changes...'}
+            </Text>
+          </View>
+        ) : authorisedPersons.filter((person) =>
+            person.relationship.toLowerCase() !== 'mother' &&
+            person.relationship.toLowerCase() !== 'father'
+          ).length > 0 ? (
+          authorisedPersons
+            .filter((person) =>
+              person.relationship.toLowerCase() !== 'mother' &&
+              person.relationship.toLowerCase() !== 'father'
+            )
+            .map((person) => (
+              <GuardianCard
+                key={person.id}
+                name={person.name}
+                relationship={person.relationship}
+                phoneNumber={typeof person.numphone === 'string' ? person.numphone : '-'}
+                variant="pickup"
+                onSave={(data) => handleSave(person.id, data)}
+                onArchive={() => handleArchiveClick(person.id, person.name)}
+                onDelete={() => handleDeleteClick(person.id, person.name)}
+              />
+            ))
         ) : (
-          <Text style={styles.emptyText}>No pickup persons added yet</Text>
+          <Text style={styles.emptyText}>No pickup persons available yet</Text>
         )}
 
       </ScrollView>
@@ -206,7 +344,18 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
     backgroundColor: Colors.white,
-  }
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  loadingText: {
+    fontSize: Typography.body.medium.fontSize as number,
+    color: Colors.text.secondary,
+  },
 })
 
 export { PickupList }

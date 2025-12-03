@@ -14,7 +14,7 @@ interface GuardianCardProps {
     phoneNumber?: string
     isArchived?: boolean
     onPress?: () => void
-    onSave?: (data: { firstName: string; lastName: string; phoneNumber: string; relationship: string }) => void
+    onSave?: (data: { name: string; phoneNumber: string; relationship: string }) => void
     onArchive?: () => void
     onDelete?: () => void
 }
@@ -22,8 +22,7 @@ interface GuardianCardProps {
 const GuardianCard = ({ name, relationship, variant, phoneNumber = '', isArchived = false, onPress, onSave, onArchive, onDelete }: GuardianCardProps) => {
     const [modalVisible, setModalVisible] = useState(false)
     const [showMoreMenu, setShowMoreMenu] = useState(false)
-    const [firstName, setFirstName] = useState(name.split(' ')[0] || '')
-    const [lastName, setLastName] = useState(name.split(' ').slice(1).join(' ') || '')
+    const [nameValue, setNameValue] = useState(name)
     const [phone, setPhone] = useState(phoneNumber)
     const [relationshipValue, setRelationshipValue] = useState(relationship)
 
@@ -39,8 +38,7 @@ const GuardianCard = ({ name, relationship, variant, phoneNumber = '', isArchive
     const handleSave = () => {
         if (onSave) {
             onSave({
-                firstName,
-                lastName,
+                name: nameValue,
                 phoneNumber: phone,
                 relationship: relationshipValue,
             })
@@ -51,8 +49,7 @@ const GuardianCard = ({ name, relationship, variant, phoneNumber = '', isArchive
 
     const handleDiscard = () => {
         // Reset to original values
-        setFirstName(name.split(' ')[0] || '')
-        setLastName(name.split(' ').slice(1).join(' ') || '')
+        setNameValue(name)
         setPhone(phoneNumber)
         setRelationshipValue(relationship)
         setModalVisible(false)
@@ -143,23 +140,12 @@ const GuardianCard = ({ name, relationship, variant, phoneNumber = '', isArchive
                         </View>
 
                         <View style={styles.inputContainer}>
-                            <Text style={styles.inputLabel}>First Name</Text>
+                            <Text style={styles.inputLabel}>Name</Text>
                             <TextInput
                                 style={styles.input}
-                                value={firstName}
-                                onChangeText={setFirstName}
-                                placeholder="Enter first name"
-                                placeholderTextColor={Colors.text.hint}
-                            />
-                        </View>
-
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.inputLabel}>Last Name</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={lastName}
-                                onChangeText={setLastName}
-                                placeholder="Enter last name"
+                                value={nameValue}
+                                onChangeText={setNameValue}
+                                placeholder="Enter name"
                                 placeholderTextColor={Colors.text.hint}
                             />
                         </View>
