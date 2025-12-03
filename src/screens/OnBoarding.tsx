@@ -28,7 +28,7 @@ const OnBoarding = () => {
 
     // Auto-navigate when user is authenticated
     useEffect(() => {
-        if (isInitialized && user && userProfile) {
+        if (isInitialized && user && userProfile && userProfile.role) {
             console.log('🚀 Auto-navigating authenticated user, role:', userProfile.role)
             if (userProfile.role === 'guardian') {
                 navigation.replace('ParentTabNavigator')

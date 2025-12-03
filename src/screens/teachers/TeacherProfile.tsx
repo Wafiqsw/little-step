@@ -18,7 +18,7 @@ type TeacherProfileNavigationProp = NativeStackNavigationProp<
 
 const TeacherProfile = () => {
   const navigation = useNavigation<TeacherProfileNavigationProp>()
-  const { user, userProfile} = useAuth();
+  const { user, userProfile } = useAuth();
 
 
   // Logout confirmation modal state
@@ -32,24 +32,24 @@ const TeacherProfile = () => {
 
   // Handle logout
   const handleLogout = async () => {
-      try {
-        console.log('🔄 Logging out...')
+    try {
+      console.log('🔄 Logging out...')
 
-        // Firebase logout
-        await logoutUser()
-        console.log('✅ Logout successful!')
-        setShowLogoutModal(false)
+      // Firebase logout
+      await logoutUser()
+      console.log('✅ Logout successful!')
+      setShowLogoutModal(false)
 
-        // Navigate to login screen and clear stack
-        navigation.replace('Login')
+      // Navigate to login screen and clear stack
+      navigation.replace('Login')
 
-      } catch (error: any) {
-        console.log('❌ Logout failed!')
-        console.log('Error Code:', error.code)
-        console.log('Error Message:', error.message)
-        setShowLogoutModal(false)
-      }
+    } catch (error: any) {
+      console.log('❌ Logout failed!')
+      console.log('Error Code:', error.code)
+      console.log('Error Message:', error.message)
+      setShowLogoutModal(false)
     }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -62,9 +62,9 @@ const TeacherProfile = () => {
 
         {/* Profile Section */}
         <View style={styles.profileSection}>
-          <Avatar name={userProfile!.name} size={100} />
-          <Text style={styles.userName}>{userProfile!.name}</Text>
-          <Text style={styles.userEmail}>{userProfile!.email}</Text>
+          <Avatar name={userProfile?.name || 'User'} size={100} />
+          <Text style={styles.userName}>{userProfile?.name || 'Loading...'}</Text>
+          <Text style={styles.userEmail}>{userProfile?.email || 'Loading...'}</Text>
         </View>
 
         {/* Account Information Section */}
@@ -74,21 +74,21 @@ const TeacherProfile = () => {
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Full Name</Text>
-              <Text style={styles.infoValue}>{userProfile!.name}</Text>
+              <Text style={styles.infoValue}>{userProfile?.name || 'N/A'}</Text>
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Email</Text>
-              <Text style={styles.infoValue}>{userProfile!.email}</Text>
+              <Text style={styles.infoValue}>{userProfile?.email || 'N/A'}</Text>
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Phone Number</Text>
-              <Text style={styles.infoValue}>{userProfile!.numphone}</Text>
+              <Text style={styles.infoValue}>{userProfile?.numphone || 'N/A'}</Text>
             </View>
 
           </View>

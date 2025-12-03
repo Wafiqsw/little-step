@@ -34,14 +34,14 @@ export type MainNavigatorParamList = {
   TeacherAddStudentStep1Email: undefined;
   TeacherAddStudentStep2Parent: {
     email: string;
-    existingParent?: import('../types/Users').Users | null;
+    existingParent?: (import('../types/Users').Users & { id: string }) | null;
   };
   TeacherAddStudentStep3Student: {
     email: string;
     parentName: string;
     parentPhone?: string;
     isExistingParent: boolean;
-    existingParent?: import('../types/Users').Users | null;
+    existingParent?: (import('../types/Users').Users & { id: string }) | null;
   };
 }
 

@@ -6,6 +6,7 @@ import {
   getDocs,
   getDoc,
   doc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -21,6 +22,16 @@ export const createData = async <T extends DocumentData>(
   data: T
 ): Promise<DocumentReference<DocumentData>> => {
   return await addDoc(collection(db, collectionName), data);
+};
+
+// CREATE WITH CUSTOM ID (e.g., using UID)
+export const createDataWithId = async <T extends DocumentData>(
+  collectionName: string,
+  id: string,
+  data: T
+): Promise<void> => {
+  const docRef = doc(db, collectionName, id);
+  await setDoc(docRef, data);
 };
 
 // READ ALL
@@ -88,22 +99,30 @@ export const getUserByPhone = async <T = DocumentData>(numphone: string): Promis
 
 // READ USER BY EMAIL
 export const getUserByEmail = async <T = DocumentData>(email: string): Promise<(T & { id: string }) | null> => {
-  const usersRef = collection(db, 'users');
+  try {
+    const usersRef = collection(db, 'users');
 
-  // Normalize email to lowercase for consistent comparison
-  const normalizedEmail = email.toLowerCase().trim();
-  console.log(`🔍 Searching for user with email: "${normalizedEmail}"`);
+    // Normalize email to lowercase for consistent comparison
+    const normalizedEmail = email.toLowerCase().trim();
+    console.log(`🔍 Searching for user with email: "${normalizedEmail}"`);
 
-  const q = query(usersRef, where('email', '==', normalizedEmail));
-  const snapshot = await getDocs(q);
+    const q = query(usersRef, where('email', '==', normalizedEmail));
+    const snapshot = await getDocs(q);
 
-  if (snapshot.empty) {
-    console.log('❌ No user found with email:', normalizedEmail);
-    return null;
+    if (snapshot.empty) {
+      console.log('❌ No user found with email:', normalizedEmail);
+      return null;
+    }
+
+    // Return the first matching user
+    const userDoc = snapshot.docs[0];
+    console.log('✅ Found user:', userDoc.data());
+    return { id: userDoc.id, ...userDoc.data() } as T & { id: string };
+  } catch (error: any) {
+    console.error('❌ ERROR in getUserByEmail:');
+    console.error('Error code:', error?.code);
+    console.error('Error message:', error?.message);
+    console.error('Full error:', error);
+    throw error;
   }
-
-  // Return the first matching user
-  const userDoc = snapshot.docs[0];
-  console.log('✅ Found user:', userDoc.data());
-  return { id: userDoc.id, ...userDoc.data() } as T & { id: string };
 };

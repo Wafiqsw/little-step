@@ -1,13 +1,10 @@
+import { DocumentReference } from "firebase/firestore";
+import { Users } from "./Users";
+
 export type Student = {
     name: string;
-    class: string;
     age: number;
     gender: "male" | "female";
-
-    // Optional fields
-    parentId?: string; // Reference to parent document
-    guardianName?: string;
-    guardianEmail?: string;
-    medicalInfo?: string;
-    allergies?: string;
+    enrollmentDate: Date;
+    guardian: DocumentReference<Users>;
 }

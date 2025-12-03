@@ -61,14 +61,16 @@ export const sendEmail = async (
  * @param code - Verification code (TOC)
  * @param parentName - Parent's name
  * @param studentName - Student's name (optional)
+ * @param tempPassword - Temporary password for first login (optional)
  */
 export const sendVerificationEmail = async (
   email: string,
   code: string,
   parentName: string,
-  studentName?: string
+  studentName?: string,
+  tempPassword?: string
 ): Promise<SendEmailResponse> => {
-  const subject = "LittleStep - Verification Code";
+  const subject = "LittleStep - Verification Code & Login Credentials";
   const html = `
     <!DOCTYPE html>
     <html>
@@ -79,8 +81,10 @@ export const sendVerificationEmail = async (
           .header { background-color: #371B34; color: white; padding: 20px; text-align: center; }
           .content { background-color: #f9f9f9; padding: 30px; }
           .code-box { background-color: white; border: 2px solid #371B34; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0; }
+          .password-box { background-color: #fff3cd; border: 2px solid #ffc107; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; margin: 20px 0; }
           .student-info { background-color: white; border-left: 4px solid #371B34; padding: 15px; margin: 20px 0; }
           .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+          .warning { color: #d32f2f; font-weight: bold; }
         </style>
       </head>
       <body>
@@ -97,10 +101,20 @@ export const sendVerificationEmail = async (
             </div>
             <p>Your child has been successfully registered with LittleStep!</p>
             ` : '<p>Thank you for registering with LittleStep!</p>'}
-            <p>Your verification code is:</p>
+            
+            <p>To complete your registration, please use the following credentials:</p>
+            
+            <p style="font-weight: bold; margin-top: 20px;">Verification Code (TOC):</p>
             <div class="code-box">${code}</div>
-            <p>Please enter this code in the app to complete your registration.</p>
-            <p>If you didn't request this code, please ignore this email.</p>
+            
+            ${tempPassword ? `
+            <p style="font-weight: bold; margin-top: 20px;">Temporary Password:</p>
+            <div class="password-box">${tempPassword}</div>
+            <p class="warning">⚠️ Please change this password after your first login!</p>
+            ` : ''}
+            
+            <p>Please enter these credentials in the app to complete your registration.</p>
+            <p>If you didn't request this, please ignore this email.</p>
           </div>
           <div class="footer">
             <p>&copy; 2024 LittleStep. All rights reserved.</p>
@@ -119,12 +133,14 @@ export const sendVerificationEmail = async (
  * @param code - New verification code (TOC)
  * @param parentName - Parent's name
  * @param studentName - Student's name (optional)
+ * @param tempPassword - Temporary password (optional)
  */
 export const resendVerificationEmail = async (
   email: string,
   code: string,
   parentName: string,
-  studentName?: string
+  studentName?: string,
+  tempPassword?: string
 ): Promise<SendEmailResponse> => {
-  return sendVerificationEmail(email, code, parentName, studentName);
+  return sendVerificationEmail(email, code, parentName, studentName, tempPassword);
 };

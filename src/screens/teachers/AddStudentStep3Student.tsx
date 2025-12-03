@@ -8,6 +8,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import Icon from 'react-native-vector-icons/FontAwesome'
 import { sendVerificationEmail } from '../../firebase/emailFunctions'
+import { createDataWithId, createData } from '../../firebase/firestore'
+import { doc } from 'firebase/firestore'
+import { db } from '../../firebase'
+import { Student } from '../../types/Student'
 
 type Step3NavigationProp = NativeStackNavigationProp<
     MainNavigatorParamList,
@@ -23,16 +27,15 @@ const AddStudentStep3Student = () => {
 
     const [formData, setFormData] = useState({
         studentName: '',
-        class: 'Year 1 Amanah',
         age: '',
         gender: 'male' as 'male' | 'female',
     })
     const [errors, setErrors] = useState({
         studentName: '',
-        class: '',
         age: '',
     })
     const [showSuccessModal, setShowSuccessModal] = useState(false)
+    const [isLoading, setIsLoading] = useState(false)
 
     const handleAvatarPress = () => {
         navigation.navigate('TeacherProfile')
@@ -43,72 +46,95 @@ const AddStudentStep3Student = () => {
         return Math.floor(100000 + Math.random() * 900000).toString()
     }
 
-    // Handle registration - you can edit this later to save to Firebase
+    // Handle registration - save both parent and student to Firestore
     const handleRegister = async () => {
+        setIsLoading(true)
         try {
-            // Prepare parent data - use existingParent if available, otherwise create new
-            const parentData = existingParent || {
-                email: email,
-                name: parentName,
-                numphone: parentPhone || '',
-                role: 'guardian' as const,
-                toc: generateTOC(),
-                ic: '',
-                address: '',
-                occupation: '',
-                registered: false,
+            let guardianId: string
+
+            // Step 1: Handle parent/guardian data
+            if (isExistingParent && existingParent) {
+                // Use existing parent's ID
+                guardianId = existingParent.id
+                console.log('Using existing parent with ID:', guardianId)
+            } else {
+                // Create new parent data
+                const parentData = {
+                    email: email,
+                    name: parentName,
+                    numphone: parentPhone || '',
+                    role: 'guardian' as const,
+                    toc: generateTOC(),
+                    ic: '',
+                    address: '',
+                    occupation: '',
+                    registered: false,
+                }
+
+                // Generate a temporary UID for the Firestore document
+                guardianId = `pending_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+                await createDataWithId('users', guardianId, parentData)
+                console.log('Parent data saved to Firestore with temp ID:', guardianId)
+
+                // Send verification email for new parents
+                if (parentData.toc) {
+                    console.log('Sending verification email to:', parentData.email)
+                    await sendVerificationEmail(
+                        parentData.email,
+                        parentData.toc,
+                        parentData.name,
+                        formData.studentName
+                    )
+                    console.log('Verification email sent successfully!')
+                }
             }
 
-            // Prepare student data matching Student type (sub-collection)
-            const studentData = {
+            // Step 2: Create guardian reference
+            const guardianRef = doc(db, 'users', guardianId)
+
+            // Step 3: Prepare student data matching Student type
+            const studentData: Omit<Student, 'guardian'> & { guardian: any } = {
                 name: formData.studentName,
-                class: formData.class,
                 age: Number(formData.age),
-                gender: formData.gender as 'male' | 'female',
-                guardianName: parentName,
-                guardianEmail: email,
+                gender: formData.gender,
+                enrollmentDate: new Date(),
+                guardian: guardianRef,
             }
+
+            // Step 4: Save student to Firestore
+            const studentDocRef = await createData('students', studentData)
+            console.log('Student saved to Firestore with ID:', studentDocRef.id)
 
             // Console log as JSON
             console.log(JSON.stringify({
-                parentData,
-                studentData
+                guardianId,
+                studentData: {
+                    ...studentData,
+                    guardian: `users/${guardianId}`,
+                }
             }, null, 2))
-
-            // Send verification email only for new parents
-            if (!isExistingParent && parentData.toc) {
-                console.log('Sending verification email to:', parentData.email)
-                await sendVerificationEmail(
-                    parentData.email,
-                    parentData.toc,
-                    parentData.name,
-                    studentData.name
-                )
-                console.log('Verification email sent successfully!')
-            }
 
             // Show success modal
             setShowSuccessModal(true)
         } catch (error) {
             console.error('Error during registration:', error)
             // You might want to show an error modal here
+        } finally {
+            setIsLoading(false)
         }
     }
 
     const handleSubmit = () => {
         // Clear previous errors
-        setErrors({ studentName: '', class: '', age: '' })
+        setErrors({ studentName: '', age: '' })
 
         // Validate form
         let hasError = false
-        const newErrors = { studentName: '', class: '', age: '' }
+        const newErrors = { studentName: '', age: '' }
 
         if (!formData.studentName.trim()) {
             newErrors.studentName = 'Please enter student name'
-            hasError = true
-        }
-        if (!formData.class.trim()) {
-            newErrors.class = 'Please enter class'
             hasError = true
         }
         if (!formData.age.trim()) {
@@ -169,17 +195,6 @@ const AddStudentStep3Student = () => {
                         onChangeText={(text) => setFormData({ ...formData, studentName: text })}
                         placeholder="e.g., Ahmad bin Ali"
                         error={errors.studentName}
-                    />
-
-                    {/* Class */}
-                    <Form
-                        label="Class *"
-                        variant="simple"
-                        size="large"
-                        value={formData.class}
-                        onChangeText={(text) => setFormData({ ...formData, class: text })}
-                        placeholder="e.g., Year 1 Amanah"
-                        error={errors.class}
                     />
 
                     {/* Age and Gender Row */}
@@ -277,12 +292,13 @@ const AddStudentStep3Student = () => {
                 )}
 
                 <Button
-                    label="Register Student"
+                    label={isLoading ? "Registering..." : "Register Student"}
                     onPress={handleSubmit}
                     variant="primary"
                     size="large"
                     fullWidth
-                    icon={<Icon name="check" size={18} color={Colors.white} />}
+                    disabled={isLoading}
+                    icon={!isLoading ? <Icon name="check" size={18} color={Colors.white} /> : undefined}
                 />
             </ScrollView>
 

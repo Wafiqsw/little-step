@@ -15,6 +15,11 @@ import { Colors, Typography, Spacing } from '../../constants'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
+import { getUserByEmail, createDataWithId, deleteData } from '../../firebase/firestore'
+import { normalizeEmail } from '../../utils'
+import { registerUser } from '../../firebase/auth'
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore'
+import { db } from '../../firebase'
 
 type RegisterNavigationProp = NativeStackNavigationProp<
     MainNavigatorParamList,
@@ -26,15 +31,17 @@ const Register = () => {
 
     const [currentStep, setCurrentStep] = useState(1) // 1, 2, or 3
 
-    // Step 1: Phone & TOC
-    const [phoneData, setPhoneData] = useState({
-        phone: '',
+    // Step 1: Email & TOC
+    const [emailData, setEmailData] = useState({
+        email: '',
         tocCode: ['', '', '', '', '', ''], // 6 digits
     })
-    const [phoneErrors, setPhoneErrors] = useState({
-        phone: '',
+    const [emailErrors, setEmailErrors] = useState({
+        email: '',
         tocCode: '',
     })
+    const [isValidating, setIsValidating] = useState(false)
+    const [validatedUser, setValidatedUser] = useState<any>(null)
 
     // TOC input refs
     const tocRefs = [
@@ -46,14 +53,14 @@ const Register = () => {
         useRef<TextInput>(null),
     ]
 
-    // Step 2: Name & Email
+    // Step 2: Name & Phone Number
     const [profileData, setProfileData] = useState({
         fullName: '',
-        email: '',
+        phoneNumber: '',
     })
     const [profileErrors, setProfileErrors] = useState({
         fullName: '',
-        email: '',
+        phoneNumber: '',
     })
 
     // Step 3: Password
@@ -74,10 +81,10 @@ const Register = () => {
         // Only allow numbers
         if (value && !/^\d+$/.test(value)) return
 
-        const newTocCode = [...phoneData.tocCode]
+        const newTocCode = [...emailData.tocCode]
         newTocCode[index] = value
 
-        setPhoneData({ ...phoneData, tocCode: newTocCode })
+        setEmailData({ ...emailData, tocCode: newTocCode })
 
         // Auto-advance to next input
         if (value && index < 5) {
@@ -85,64 +92,99 @@ const Register = () => {
         }
 
         // Clear error when typing
-        if (phoneErrors.tocCode) {
-            setPhoneErrors({ ...phoneErrors, tocCode: '' })
+        if (emailErrors.tocCode) {
+            setEmailErrors({ ...emailErrors, tocCode: '' })
         }
     }
 
     const handleTocKeyPress = (index: number, key: string) => {
         // Handle backspace to go to previous input
-        if (key === 'Backspace' && !phoneData.tocCode[index] && index > 0) {
+        if (key === 'Backspace' && !emailData.tocCode[index] && index > 0) {
             tocRefs[index - 1].current?.focus()
         }
     }
 
-    const handleStep1Next = () => {
-        // Validate phone and TOC
+    const handleStep1Next = async () => {
+        // Validate email and TOC
         let hasError = false
-        const newErrors = { phone: '', tocCode: '' }
+        const newErrors = { email: '', tocCode: '' }
 
-        if (!phoneData.phone.trim()) {
-            newErrors.phone = 'Phone number is required'
+        if (!emailData.email.trim()) {
+            newErrors.email = 'Email is required'
             hasError = true
-        } else if (phoneData.phone.length < 10) {
-            newErrors.phone = 'Phone number must be at least 10 digits'
+        } else if (!/\S+@\S+\.\S+/.test(emailData.email)) {
+            newErrors.email = 'Please enter a valid email'
             hasError = true
         }
 
-        const tocCodeComplete = phoneData.tocCode.every(digit => digit !== '')
+        const tocCodeComplete = emailData.tocCode.every(digit => digit !== '')
         if (!tocCodeComplete) {
             newErrors.tocCode = 'Please enter complete TOC code'
             hasError = true
         }
 
-        setPhoneErrors(newErrors)
+        setEmailErrors(newErrors)
 
         if (hasError) {
-            setErrorMessage('Please enter a valid phone number and TOC code')
+            setErrorMessage('Please enter a valid email and TOC code')
             setShowErrorModal(true)
             return
         }
 
-        // If valid, go to step 2
-        setCurrentStep(2)
+        // Validate email and TOC against Firestore
+        setIsValidating(true)
+        try {
+            const normalizedEmail = normalizeEmail(emailData.email)
+            const user = await getUserByEmail(normalizedEmail)
+
+            if (!user) {
+                setErrorMessage('Email not found. Please check your email address.')
+                setShowErrorModal(true)
+                setIsValidating(false)
+                return
+            }
+
+            const enteredToc = emailData.tocCode.join('')
+            if (user.toc !== enteredToc) {
+                setErrorMessage('Invalid TOC code. Please check your verification code.')
+                setShowErrorModal(true)
+                setIsValidating(false)
+                return
+            }
+
+            // Email and TOC are valid, store user data and go to step 2
+            setValidatedUser(user)
+
+            // Prefill form with user data
+            setProfileData({
+                fullName: user.name || '',
+                phoneNumber: user.numphone || '',
+            })
+
+            setIsValidating(false)
+            setCurrentStep(2)
+        } catch (error) {
+            setErrorMessage('An error occurred. Please try again.')
+            setShowErrorModal(true)
+            setIsValidating(false)
+        }
     }
 
     const handleStep2Next = () => {
-        // Validate name and email
+        // Validate name and phone number
         let hasError = false
-        const newErrors = { fullName: '', email: '' }
+        const newErrors = { fullName: '', phoneNumber: '' }
 
         if (!profileData.fullName.trim()) {
             newErrors.fullName = 'Full name is required'
             hasError = true
         }
 
-        if (!profileData.email.trim()) {
-            newErrors.email = 'Email is required'
+        if (!profileData.phoneNumber.trim()) {
+            newErrors.phoneNumber = 'Phone number is required'
             hasError = true
-        } else if (!/\S+@\S+\.\S+/.test(profileData.email)) {
-            newErrors.email = 'Please enter a valid email'
+        } else if (profileData.phoneNumber.length < 10) {
+            newErrors.phoneNumber = 'Phone number must be at least 10 digits'
             hasError = true
         }
 
@@ -156,7 +198,7 @@ const Register = () => {
         setCurrentStep(3)
     }
 
-    const handleStep3Register = () => {
+    const handleStep3Register = async () => {
         // Validate passwords
         let hasError = false
         const newErrors = { password: '', confirmPassword: '' }
@@ -183,12 +225,91 @@ const Register = () => {
             return
         }
 
-        // All steps complete - register user
-        const fullTocCode = phoneData.tocCode.join('')
-        console.log('Register:', { ...phoneData, tocCode: fullTocCode, ...profileData, ...passwordData })
+        try {
+            setIsValidating(true)
 
-        // Show success modal
-        setShowSuccessModal(true)
+            const normalizedEmail = normalizeEmail(emailData.email)
+
+            // Step 1: Create Firebase Auth account with user's chosen password
+            const userCredential = await registerUser(normalizedEmail, passwordData.password)
+            const uid = userCredential.user.uid
+            console.log('✅ Firebase Auth account created with UID:', uid)
+
+            // Step 2: Update user data in Firestore with the new UID
+            const updatedUserData = {
+                name: profileData.fullName,
+                numphone: profileData.phoneNumber,
+                email: normalizedEmail,
+                role: 'guardian' as const,
+                registered: true,
+                ic: '',
+                address: '',
+                occupation: '',
+            }
+
+            // Create new document with Auth UID
+            await createDataWithId('users', uid, updatedUserData)
+            console.log('✅ User data saved to Firestore with Auth UID')
+
+            // Step 3: Update all children's guardian references from old pending ID to new Auth UID
+            if (validatedUser?.id) {
+                try {
+                    // Create references for old and new guardian documents
+                    const oldGuardianRef = doc(db, 'users', validatedUser.id)
+                    const newGuardianRef = doc(db, 'users', uid)
+
+                    // Query all students that have the old guardian reference
+                    const studentsRef = collection(db, 'students')
+                    const studentsQuery = query(studentsRef, where('guardian', '==', oldGuardianRef))
+                    const studentsSnapshot = await getDocs(studentsQuery)
+
+                    console.log(`🔍 Found ${studentsSnapshot.size} student(s) to update`)
+
+                    // Update each student's guardian reference to the new one
+                    const updatePromises = studentsSnapshot.docs.map(async (studentDoc) => {
+                        await updateDoc(doc(db, 'students', studentDoc.id), {
+                            guardian: newGuardianRef
+                        })
+                        console.log(`✅ Updated guardian reference for student: ${studentDoc.id}`)
+                    })
+
+                    await Promise.all(updatePromises)
+                    console.log('✅ All student guardian references updated')
+
+                    // Step 4: Delete the old temporary document
+                    await deleteData('users', validatedUser.id)
+                    console.log('✅ Deleted pending temp user with ID:', validatedUser.id)
+                } catch (error) {
+                    console.error('❌ Error updating student references:', error)
+                    // Continue with registration even if student update fails
+                    // The parent account is already created
+                }
+            }
+
+            console.log('Registration complete:', {
+                email: normalizedEmail,
+                ...profileData,
+                registered: true
+            })
+
+            setIsValidating(false)
+            setShowSuccessModal(true)
+        } catch (error: any) {
+            console.error('Error during registration:', error)
+            let errorMsg = 'An error occurred during registration. Please try again.'
+
+            if (error?.code === 'auth/email-already-in-use') {
+                errorMsg = 'This email is already registered. Please login instead.'
+            } else if (error?.code === 'auth/invalid-email') {
+                errorMsg = 'Invalid email address.'
+            } else if (error?.code === 'auth/weak-password') {
+                errorMsg = 'Password is too weak. Please use a stronger password.'
+            }
+
+            setErrorMessage(errorMsg)
+            setShowErrorModal(true)
+            setIsValidating(false)
+        }
     }
 
     const handleSuccessClose = () => {
@@ -233,34 +354,35 @@ const Register = () => {
                             <Text style={styles.subtitle}>Step {currentStep} of 3</Text>
                         </View>
 
-                        {/* Step 1: Phone & TOC */}
+                        {/* Step 1: Email & TOC */}
                         {currentStep === 1 && (
                             <View style={styles.formContainer}>
                                 <Form
-                                    label="Phone Number"
+                                    label="Email Address"
                                     variant="simple"
                                     size="large"
-                                    placeholder="Enter your phone number"
-                                    keyboardType="phone-pad"
-                                    value={phoneData.phone}
+                                    placeholder="Enter your email address"
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    value={emailData.email}
                                     onChangeText={(text) => {
-                                        setPhoneData({ ...phoneData, phone: text })
-                                        if (phoneErrors.phone) setPhoneErrors({ ...phoneErrors, phone: '' })
+                                        setEmailData({ ...emailData, email: text })
+                                        if (emailErrors.email) setEmailErrors({ ...emailErrors, email: '' })
                                     }}
-                                    error={phoneErrors.phone}
+                                    error={emailErrors.email}
                                 />
 
                                 {/* TOC Code - 6 boxes */}
                                 <View style={styles.tocContainer}>
                                     <Text style={styles.tocLabel}>TOC Code</Text>
                                     <View style={styles.tocBoxesContainer}>
-                                        {phoneData.tocCode.map((digit, index) => (
+                                        {emailData.tocCode.map((digit, index) => (
                                             <TextInput
                                                 key={index}
                                                 ref={tocRefs[index]}
                                                 style={[
                                                     styles.tocBox,
-                                                    phoneErrors.tocCode && !digit && styles.tocBoxError,
+                                                    emailErrors.tocCode && !digit && styles.tocBoxError,
                                                 ]}
                                                 value={digit}
                                                 onChangeText={(value) => handleTocChange(index, value)}
@@ -271,24 +393,25 @@ const Register = () => {
                                             />
                                         ))}
                                     </View>
-                                    {phoneErrors.tocCode && (
-                                        <Text style={styles.errorText}>{phoneErrors.tocCode}</Text>
+                                    {emailErrors.tocCode && (
+                                        <Text style={styles.errorText}>{emailErrors.tocCode}</Text>
                                     )}
                                 </View>
 
                                 <View style={styles.buttonContainer}>
                                     <Button
-                                        label="Next"
+                                        label={isValidating ? "Validating..." : "Next"}
                                         onPress={handleStep1Next}
                                         variant="primary"
                                         size="large"
                                         fullWidth
+                                        disabled={isValidating}
                                     />
                                 </View>
                             </View>
                         )}
 
-                        {/* Step 2: Name & Email */}
+                        {/* Step 2: Name & Phone Number */}
                         {currentStep === 2 && (
                             <View style={styles.formContainer}>
                                 <Form
@@ -305,18 +428,17 @@ const Register = () => {
                                 />
 
                                 <Form
-                                    label="Email"
+                                    label="Phone Number"
                                     variant="simple"
                                     size="large"
-                                    placeholder="Enter your email"
-                                    keyboardType="email-address"
-                                    autoCapitalize="none"
-                                    value={profileData.email}
+                                    placeholder="Enter your phone number"
+                                    keyboardType="phone-pad"
+                                    value={profileData.phoneNumber}
                                     onChangeText={(text) => {
-                                        setProfileData({ ...profileData, email: text })
-                                        if (profileErrors.email) setProfileErrors({ ...profileErrors, email: '' })
+                                        setProfileData({ ...profileData, phoneNumber: text })
+                                        if (profileErrors.phoneNumber) setProfileErrors({ ...profileErrors, phoneNumber: '' })
                                     }}
-                                    error={profileErrors.email}
+                                    error={profileErrors.phoneNumber}
                                 />
 
                                 <View style={styles.buttonContainer}>

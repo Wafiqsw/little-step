@@ -20,7 +20,7 @@ const AddStudentStep1Email = () => {
     const navigation = useNavigation<Step1NavigationProp>()
     const [email, setEmail] = useState('')
     const [showModal, setShowModal] = useState(false)
-    const [foundParent, setFoundParent] = useState<Users | null>(null)
+    const [foundParent, setFoundParent] = useState<(Users & { id: string }) | null>(null)
     const [error, setError] = useState('')
 
     const handleAvatarPress = () => {
@@ -47,14 +47,14 @@ const AddStudentStep1Email = () => {
 
         try {
             // Check if parent exists in Firestore by email
-            const existingParent = await getUserByEmail(normalizedEmail)
+            const existingParent = await getUserByEmail<Users>(normalizedEmail)
             console.log('Existing parent:', existingParent)
 
             if (existingParent) {
                 // Parent found - show modal
                 console.log('Setting foundParent:', existingParent)
                 console.log('Setting showModal to true')
-                setFoundParent(existingParent as any)
+                setFoundParent(existingParent)
                 setShowModal(true)
                 console.log('Modal state updated')
             } else {
@@ -77,15 +77,6 @@ const AddStudentStep1Email = () => {
         navigation.navigate('TeacherAddStudentStep2Parent', {
             email: normalizedEmail,
             existingParent: foundParent,
-        })
-    }
-
-    const handleCreateNew = () => {
-        setShowModal(false)
-        const normalizedEmail = normalizeEmail(email)
-        navigation.navigate('TeacherAddStudentStep2Parent', {
-            email: normalizedEmail,
-            existingParent: null,
         })
     }
 
@@ -146,14 +137,15 @@ const AddStudentStep1Email = () => {
             <ConfirmationModal
                 visible={showModal}
                 title="Parent Found"
-                message={`We found an existing parent with this email address:\n\n${foundParent?.name}\n${foundParent?.email}\n\nWould you like to use this parent or create a new one?`}
+                message={`We found an existing parent with this email address:\n\n${foundParent?.name}\n${foundParent?.email}\n\nThis email is already registered. You must use the existing parent account to add a new student.`}
                 confirmText="Use Existing Parent"
-                cancelText="Create New Parent"
+                cancelText="Cancel"
                 onConfirm={handleUseExisting}
-                onCancel={handleCreateNew}
+                onCancel={handleCloseModal}
                 onClose={handleCloseModal}
                 iconName="user-circle"
                 iconColor={Colors.primary[600]}
+                confirmColor={Colors.primary[600]}
             />
         </SafeAreaView>
     )

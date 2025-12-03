@@ -61,12 +61,12 @@ const Login = () => {
             console.log('Email:', userCredential.user.email)
             console.log('User Data:', userCredential.user)
 
-            const userProfile = await getDataById<Users>("users",uid)
+            const userProfile = await getDataById<Users>("users", uid)
             console.log('User Info', JSON.stringify(userProfile))
 
 
             // Navigate based on user role
-            if (userProfile) {
+            if (userProfile && userProfile.role) {
                 if (userProfile.role === 'guardian') {
                     console.log('🔄 Navigating to Parent Tab Navigator')
                     navigation.replace('ParentTabNavigator')
@@ -77,7 +77,7 @@ const Login = () => {
                     console.log('⚠️ Unknown role:', userProfile.role)
                 }
             } else {
-                console.log('⚠️ No user profile found in Firestore')
+                console.log('⚠️ No user profile found in Firestore or missing role')
                 setErrors({ ...errors, email: 'User profile not found. Please contact support.' })
             }
 
