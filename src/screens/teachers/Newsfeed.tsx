@@ -11,8 +11,9 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { getAllData, deleteData } from '../../firebase/firestore'
 import { auth } from '../../firebase/index'
 import { Announcement } from '../../types/Announcement'
-import { DocumentReference, getDoc } from 'firebase/firestore'
+import { DocumentReference, getDoc, Timestamp } from 'firebase/firestore'
 import { Users } from '../../types/Users'
+import { isWithinTwoWeeks } from '../../utils'
 
 type NewsfeedNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'TeacherTabNavigator'>
 
@@ -32,9 +33,34 @@ const Newsfeed = () => {
       setLoading(true)
       const data = await getAllData<Announcement>('announcements')
 
-      // Fetch author names for all announcements
+      // Filter announcements to only show those within the last 2 weeks
+      const recentAnnouncements = data.filter((announcement) => {
+        // Get the announcement_date field (snake_case in Firestore)
+        const dateField = (announcement as any).announcement_date
+
+        if (!dateField) {
+          return false // Skip if no date
+        }
+
+        // Convert Firestore Timestamp to Date
+        let announcementDate: Date
+        if (dateField instanceof Timestamp) {
+          announcementDate = dateField.toDate()
+        } else if (dateField instanceof Date) {
+          announcementDate = dateField
+        } else if (typeof dateField === 'object' && dateField.seconds) {
+          announcementDate = new Date(dateField.seconds * 1000)
+        } else {
+          return false // Skip if date format is unrecognized
+        }
+
+        // Check if within last 2 weeks
+        return isWithinTwoWeeks(announcementDate)
+      })
+
+      // Fetch author names for filtered announcements
       const announcementsWithAuthors = await Promise.all(
-        data.map(async (announcement) => {
+        recentAnnouncements.map(async (announcement) => {
           let authorName = 'Unknown'
           try {
             if (announcement.posted_by) {
@@ -51,7 +77,7 @@ const Newsfeed = () => {
       )
 
       setAnnouncements(announcementsWithAuthors)
-      console.log('✅ Fetched', announcementsWithAuthors.length, 'announcements')
+      console.log('✅ Fetched', announcementsWithAuthors.length, 'recent announcements (within 2 weeks)')
     } catch (error) {
       console.error('❌ Error fetching announcements:', error)
       // Fallback to mock data on error

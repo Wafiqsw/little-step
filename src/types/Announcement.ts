@@ -2,7 +2,8 @@ import { DocumentReference } from "firebase/firestore";
 import { Users } from "./Users";
 
 export type Announcement = {
-    announcementDate: Date;
+    id: string;
+    announcement_date: Date;
     tag: 'urgent' | 'important' | 'general';
     heading: string;
     subheading: string;

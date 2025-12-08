@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, StyleSheet } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import Icon from 'react-native-vector-icons/FontAwesome'
 import { Colors, Typography, Spacing, BorderRadius } from '../constants'
 
@@ -7,18 +7,41 @@ export interface AnswerCardProps {
   teacherName: string
   answerDate: string
   answer: string
+  // Owner actions
+  isOwner?: boolean
+  onEdit?: () => void
+  onDelete?: () => void
 }
 
 const AnswerCard: React.FC<AnswerCardProps> = ({
   teacherName,
   answerDate,
   answer,
+  isOwner = false,
+  onEdit,
+  onDelete,
 }) => {
   return (
     <View style={styles.answerContainer}>
       <View style={styles.answerHeader}>
-        <Icon name="comment" size={18} color="#62B76F" />
-        <Text style={styles.answerLabel}>Answer</Text>
+        <View style={styles.answerHeaderLeft}>
+          <Icon name="comment" size={18} color="#62B76F" />
+          <Text style={styles.answerLabel}>Answer</Text>
+        </View>
+        {isOwner && (
+          <View style={styles.actionButtons}>
+            {onEdit && (
+              <TouchableOpacity onPress={onEdit} style={styles.actionButton}>
+                <Icon name="edit" size={14} color="#62B76F" />
+              </TouchableOpacity>
+            )}
+            {onDelete && (
+              <TouchableOpacity onPress={onDelete} style={styles.actionButton}>
+                <Icon name="trash" size={14} color="#FF4979" />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
       <View style={styles.answerMeta}>
         <Text style={styles.teacherName}>{teacherName}</Text>
@@ -41,8 +64,21 @@ const styles = StyleSheet.create({
   answerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
     marginBottom: 4,
+  },
+  answerHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  actionButton: {
+    padding: 4,
   },
   answerLabel: {
     fontSize: Typography.body.medium.fontSize as number,

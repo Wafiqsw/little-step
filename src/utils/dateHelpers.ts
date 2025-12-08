@@ -168,3 +168,25 @@ export const isSameDay = (date1: Date, date2: Date): boolean => {
     date1.getDate() === date2.getDate()
   )
 }
+
+/**
+ * Check if a date is within the last N days from today
+ * @param date - Date to check
+ * @param days - Number of days to check (default: 14 for two weeks)
+ * @returns boolean
+ */
+export const isWithinLastDays = (date: Date, days: number = 14): boolean => {
+  const now = new Date()
+  const diffTime = now.getTime() - date.getTime()
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays >= 0 && diffDays <= days
+}
+
+/**
+ * Check if a date is within the last two weeks
+ * @param date - Date to check
+ * @returns boolean
+ */
+export const isWithinTwoWeeks = (date: Date): boolean => {
+  return isWithinLastDays(date, 14)
+}
