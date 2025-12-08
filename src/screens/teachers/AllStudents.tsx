@@ -30,7 +30,7 @@ const AllStudents = () => {
     }
 
     const handleEditStudent = (studentId: number) => {
-        navigation.navigate('TeacherEditStudent', { studentId })
+        navigation.navigate('TeacherEditStudent', { studentId: studentId.toString() })
     }
 
     // Filter students based on search query
@@ -102,7 +102,7 @@ const AllStudents = () => {
                             <StudentCard
                                 key={student.id}
                                 student={student}
-                                onPress={handleEditStudent}
+                                onPress={() => handleEditStudent(student.id)}
                             />
                         ))
                     ) : (

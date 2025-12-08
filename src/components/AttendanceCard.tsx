@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native'
+import { View, Text, StyleSheet, ViewStyle, TextStyle, TouchableOpacity } from 'react-native'
 import { Colors, Typography, Spacing, BorderRadius } from '../constants'
 
 export type AttendanceStatus = 'present' | 'absent' | 'pending'
@@ -9,6 +9,7 @@ export interface AttendanceCardProps {
   status: AttendanceStatus
   time?: string
   containerStyle?: ViewStyle
+  onPress?: () => void
 }
 
 const AttendanceCard: React.FC<AttendanceCardProps> = ({
@@ -16,6 +17,7 @@ const AttendanceCard: React.FC<AttendanceCardProps> = ({
   status,
   time,
   containerStyle,
+  onPress,
 }) => {
   // Get initials from name (first letter of each word, capitalized)
   const getInitials = (fullName: string): string => {
@@ -65,7 +67,12 @@ const AttendanceCard: React.FC<AttendanceCardProps> = ({
   const statusInfo = getStatusInfo()
 
   return (
-    <View style={[styles.container, containerStyle]}>
+    <TouchableOpacity
+      style={[styles.container, containerStyle]}
+      onPress={onPress}
+      activeOpacity={0.7}
+      disabled={!onPress}
+    >
       {/* Column 1: Avatar */}
       <View style={[styles.avatar, { backgroundColor: getAvatarColor() }]}>
         <Text style={styles.avatarText}>{getInitials(name)}</Text>
@@ -85,7 +92,7 @@ const AttendanceCard: React.FC<AttendanceCardProps> = ({
           <Text style={styles.time}>{time}</Text>
         </View>
       )}
-    </View>
+    </TouchableOpacity>
   )
 }
 

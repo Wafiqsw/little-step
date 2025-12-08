@@ -5,7 +5,7 @@ import { Avatar } from './Avatar'
 import Icon from 'react-native-vector-icons/FontAwesome'
 
 export interface StudentCardData {
-    id: string
+    id: number
     studentName: string
     age: number
     gender: 'male' | 'female'
@@ -16,7 +16,7 @@ export interface StudentCardData {
 
 interface StudentCardProps {
     student: StudentCardData
-    onPress?: (studentId: string) => void
+    onPress?: (studentId: number) => void
 }
 
 const StudentCard = ({ student, onPress }: StudentCardProps) => {

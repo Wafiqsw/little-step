@@ -1,67 +1,281 @@
-import { View, Text, StyleSheet, ScrollView } from 'react-native'
-import React, { useMemo } from 'react'
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native'
+import React, { useMemo, useState, useEffect } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, DateCard, AttendanceSummaryCard, AttendanceCard } from '../../components'
 import { SelectedDateProvider, useSelectedDate } from '../../hooks'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
 import { isSameDay } from '../../utils'
 import type { AttendanceStatus } from '../../components/AttendanceCard'
-import {
-  mockStudents,
-  mockTeacher,
-  generateMockAttendanceRecords,
-  type StudentAttendanceRecord
-} from '../../data'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import { useNavigation } from '@react-navigation/native'
+import { db } from '../../firebase'
+import { collection, query, where, getDocs, Timestamp, doc } from 'firebase/firestore'
+import type { Attendance } from '../../types/Attendance'
 
 type DashboardNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'ParentTabNavigator'>
 
+type StudentData = {
+  id: string
+  name: string
+  dateRegistered: Date
+}
 
-// Generate attendance records for all students
-const mockAttendanceRecords: StudentAttendanceRecord[] = generateMockAttendanceRecords(
-  mockStudents.map(s => s.id)
-)
+type AttendanceRecord = {
+  studentId: string
+  date: Date
+  attendance_status: boolean
+  arrival_time?: Date
+}
 
 const DashboardContent = () => {
+  const navigation = useNavigation<DashboardNavigationProp>()
+  const { selectedDate } = useSelectedDate()
 
-  const navigation = useNavigation<DashboardNavigationProp>();
-  
+  const [students, setStudents] = useState<StudentData[]>([])
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
+  const [loading, setLoading] = useState(true)
+
   const handleAvatarPress = () => {
     navigation.navigate('TeacherProfile')
   }
 
-  const { selectedDate } = useSelectedDate()
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
+  // Fetch students from Firestore
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        // Fetch all students from the students collection
+        const studentsQuery = query(collection(db, 'students'))
+        const studentsSnapshot = await getDocs(studentsQuery)
+
+        const studentsData: StudentData[] = studentsSnapshot.docs.map(doc => {
+          const data = doc.data()
+          // TODO: Add registration date field to Student type
+          // For now, use a default date (beginning of school year)
+          const defaultDate = new Date('2025-01-01')
+
+          return {
+            id: doc.id,
+            name: data.name || 'Unknown Student',
+            dateRegistered: defaultDate
+          }
+        })
+
+        setStudents(studentsData)
+      } catch (error) {
+        console.error('Error fetching students:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStudents()
+  }, [])
+
+  // Fetch attendance records for selected date
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      try {
+        const selectedDateOnly = new Date(selectedDate)
+        selectedDateOnly.setHours(0, 0, 0, 0)
+
+        const nextDay = new Date(selectedDateOnly)
+        nextDay.setDate(nextDay.getDate() + 1)
+
+        const attendanceQuery = query(
+          collection(db, 'attendance'),
+          where('date', '>=', Timestamp.fromDate(selectedDateOnly)),
+          where('date', '<', Timestamp.fromDate(nextDay))
+        )
+
+        const attendanceSnapshot = await getDocs(attendanceQuery)
+
+        const attendanceData: AttendanceRecord[] = attendanceSnapshot.docs.map(doc => {
+          const data = doc.data() as Attendance
+          // Extract student ID from student_ref DocumentReference
+          const studentId = data.student_ref?.id || ''
+
+          return {
+            studentId,
+            date: data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date),
+            attendance_status: data.attendance_status,
+            arrival_time: data.arrival_time instanceof Timestamp
+              ? data.arrival_time.toDate()
+              : data.arrival_time ? new Date(data.arrival_time) : undefined
+          }
+        })
+
+        setAttendanceRecords(attendanceData)
+      } catch (error) {
+        console.error('Error fetching attendance:', error)
+      }
+    }
+
+    if (students.length > 0) {
+      fetchAttendance()
+    }
+  }, [selectedDate, students])
+
+  // Handle attendance card click - toggle between present/absent
+  const handleAttendanceClick = async (studentId: string, currentStatus: AttendanceStatus) => {
+    try {
+      const selectedDateOnly = new Date(selectedDate)
+      selectedDateOnly.setHours(0, 0, 0, 0)
+
+      // Don't allow marking future dates
+      if (selectedDateOnly > today) {
+        console.log('Cannot mark attendance for future dates')
+        return
+      }
+
+      // Toggle status: pending/absent -> present, present -> absent
+      const newStatus = currentStatus === 'present' ? false : true
+      const now = new Date()
+
+      // Find existing attendance record
+      const existingRecord = attendanceRecords.find(r => r.studentId === studentId)
+
+      if (existingRecord) {
+        // Update existing record
+        const attendanceQuery = query(
+          collection(db, 'attendance'),
+          where('date', '>=', Timestamp.fromDate(selectedDateOnly)),
+          where('date', '<', Timestamp.fromDate(new Date(selectedDateOnly.getTime() + 86400000)))
+        )
+        const snapshot = await getDocs(attendanceQuery)
+        const docToUpdate = snapshot.docs.find(doc => {
+          const data = doc.data() as Attendance
+          return data.student_ref?.id === studentId
+        })
+
+        if (docToUpdate) {
+          const { updateData } = await import('../../firebase/firestore')
+          await updateData('attendance', docToUpdate.id, {
+            attendance_status: newStatus
+          })
+        }
+      } else {
+        // Create new attendance record
+        const { createData } = await import('../../firebase/firestore')
+        const studentRef = doc(db, 'students', studentId)
+
+        await createData('attendance', {
+          date: Timestamp.fromDate(selectedDateOnly),
+          attendance_status: newStatus,
+          student_ref: studentRef
+        })
+      }
+
+      // Refresh attendance data
+      const nextDay = new Date(selectedDateOnly)
+      nextDay.setDate(nextDay.getDate() + 1)
+
+      const attendanceQuery = query(
+        collection(db, 'attendance'),
+        where('date', '>=', Timestamp.fromDate(selectedDateOnly)),
+        where('date', '<', Timestamp.fromDate(nextDay))
+      )
+
+      const attendanceSnapshot = await getDocs(attendanceQuery)
+
+      const attendanceData: AttendanceRecord[] = attendanceSnapshot.docs.map(doc => {
+        const data = doc.data() as Attendance
+        const studentId = data.student_ref?.id || ''
+
+        return {
+          studentId,
+          date: data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date),
+          attendance_status: data.attendance_status,
+          arrival_time: data.arrival_time instanceof Timestamp
+            ? data.arrival_time.toDate()
+            : data.arrival_time ? new Date(data.arrival_time) : undefined
+        }
+      })
+
+      setAttendanceRecords(attendanceData)
+    } catch (error) {
+      console.error('Error updating attendance:', error)
+    }
+  }
+
   // Compute students with attendance data for the selected date
   const studentsWithAttendance = useMemo(() => {
-    // Check if selected date is in the future
-    const isFutureDate = selectedDate > today
+    const selectedDateOnly = new Date(selectedDate)
+    selectedDateOnly.setHours(0, 0, 0, 0)
 
-    return mockStudents.map(student => {
-      if (isFutureDate) {
+    return students.map(student => {
+      // Check if selected date is before student joined
+      const studentJoinDate = new Date(student.dateRegistered)
+      studentJoinDate.setHours(0, 0, 0, 0)
+
+      if (selectedDateOnly < studentJoinDate) {
         return {
-          ...student,
+          id: student.id,
+          name: student.name,
           status: 'pending' as AttendanceStatus,
-          time: undefined
+          time: undefined,
+          note: 'Not yet enrolled'
         }
       }
 
       // Find attendance record for this student on selected date
-      const record = mockAttendanceRecords.find(
-        r => r.studentId === student.id && isSameDay(r.date, selectedDate)
+      const record = attendanceRecords.find(
+        r => r.studentId === student.id && isSameDay(r.date, selectedDateOnly)
       )
 
+      // Determine status based on date and record
+      let status: AttendanceStatus
+      let time: string | undefined
+
+      if (selectedDateOnly > today) {
+        // Future date - no record yet
+        status = 'pending'
+        time = undefined
+      } else if (selectedDateOnly < today) {
+        // Past date
+        if (!record || !record.attendance_status) {
+          // No record or status is false = Absent
+          status = 'absent'
+          time = undefined
+        } else {
+          // Has record and status is true = Present
+          status = 'present'
+          time = record.arrival_time?.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        }
+      } else {
+        // Today
+        if (!record) {
+          // No record yet
+          status = 'pending'
+          time = undefined
+        } else if (record.attendance_status) {
+          // Present
+          status = 'present'
+          time = record.arrival_time?.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        } else {
+          // Absent
+          status = 'absent'
+          time = undefined
+        }
+      }
+
       return {
-        ...student,
-        status: (record?.status || 'pending') as AttendanceStatus,
-        time: record?.time
+        id: student.id,
+        name: student.name,
+        status,
+        time
       }
     })
-  }, [selectedDate])
+  }, [selectedDate, today, students, attendanceRecords])
 
   // Determine the title based on selected date
   const getAttendanceTitle = () => {
@@ -83,51 +297,59 @@ const DashboardContent = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header onAvatarPress={handleAvatarPress}/>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Teacher Info Section */}
-        <View style={styles.teacherSection}>
-          <Text style={styles.teacherName}>{mockTeacher.name}</Text>
-          <Text style={styles.teacherClass}>{mockTeacher.class}</Text>
+      <Header onAvatarPress={handleAvatarPress} />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary[600]} />
+          <Text style={styles.loadingText}>Loading students...</Text>
         </View>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Teacher Info Section */}
+          <View style={styles.teacherSection}>
+            <Text style={styles.teacherName}>Teacher Dashboard</Text>
+            <Text style={styles.teacherClass}>My Class</Text>
+          </View>
 
-        {/* Date Card */}
-        <DateCard />
+          {/* Date Card */}
+          <DateCard />
 
-        {/* Attendance Title */}
-        <Text style={styles.attendanceTitle}>{getAttendanceTitle()}</Text>
+          {/* Attendance Title */}
+          <Text style={styles.attendanceTitle}>{getAttendanceTitle()}</Text>
 
-        {/* Attendance Summary Cards */}
-        <View style={styles.summaryContainer}>
-          <AttendanceSummaryCard
-            variant="present"
-            total={presentCount}
-            containerStyle={styles.summaryCard}
-          />
-          <AttendanceSummaryCard
-            variant="absent"
-            total={absentCount}
-            containerStyle={styles.summaryCard}
-          />
-        </View>
-
-        {/* Attendance List */}
-        <View style={styles.attendanceList}>
-          {studentsWithAttendance.map((student) => (
-            <AttendanceCard
-              key={student.id}
-              name={student.name}
-              status={student.status}
-              time={student.time}
-              containerStyle={styles.attendanceCard}
+          {/* Attendance Summary Cards */}
+          <View style={styles.summaryContainer}>
+            <AttendanceSummaryCard
+              variant="present"
+              total={presentCount}
+              containerStyle={styles.summaryCard}
             />
-          ))}
-        </View>
-      </ScrollView>
+            <AttendanceSummaryCard
+              variant="absent"
+              total={absentCount}
+              containerStyle={styles.summaryCard}
+            />
+          </View>
+
+          {/* Attendance List */}
+          <View style={styles.attendanceList}>
+            {studentsWithAttendance.map((student) => (
+              <AttendanceCard
+                key={student.id}
+                name={student.name}
+                status={student.status}
+                time={student.time}
+                containerStyle={styles.attendanceCard}
+                onPress={() => handleAttendanceClick(student.id, student.status)}
+              />
+            ))}
+          </View>
+        </ScrollView>
+      )}
     </SafeAreaView>
   )
 }
@@ -187,6 +409,16 @@ const styles = StyleSheet.create({
   },
   attendanceCard: {
     marginBottom: 0,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  loadingText: {
+    fontSize: Typography.body.medium.fontSize as number,
+    color: Colors.text.secondary,
   },
 })
 
