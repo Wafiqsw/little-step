@@ -400,12 +400,12 @@ const Register = () => {
 
                                 <View style={styles.buttonContainer}>
                                     <Button
-                                        label={isValidating ? "Validating..." : "Next"}
+                                        label="Next"
                                         onPress={handleStep1Next}
                                         variant="primary"
                                         size="large"
                                         fullWidth
-                                        disabled={isValidating}
+                                        loading={isValidating}
                                     />
                                 </View>
                             </View>
@@ -523,6 +523,7 @@ const Register = () => {
                                         variant="primary"
                                         size="large"
                                         fullWidth
+                                        loading={isValidating}
                                     />
                                     <Button
                                         label="Back"
@@ -530,6 +531,7 @@ const Register = () => {
                                         variant="secondary"
                                         size="large"
                                         fullWidth
+                                        disabled={isValidating}
                                     />
                                 </View>
                             </View>

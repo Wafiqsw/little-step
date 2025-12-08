@@ -38,6 +38,8 @@ const Login = () => {
         password: '',
     })
 
+    const [loading, setLoading] = useState(false)
+
     const handleLogin = async () => {
         try {
             // Basic validation
@@ -50,6 +52,7 @@ const Login = () => {
                 return
             }
 
+            setLoading(true)
             console.log('🔄 Attempting login for:', formData.email)
 
             // Firebase login
@@ -82,6 +85,7 @@ const Login = () => {
             }
 
         } catch (error: any) {
+            setLoading(false)
             console.log('❌ Login Failed!')
             console.log('Error Code:', error.code)
             console.log('Error Message:', error.message)
@@ -177,6 +181,7 @@ const Login = () => {
                                     variant="primary"
                                     size="large"
                                     fullWidth
+                                    loading={loading}
                                 />
                             </View>
 

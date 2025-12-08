@@ -14,6 +14,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import { getNewsById } from '../../data/MockNews'
 import Icon from 'react-native-vector-icons/FontAwesome'
+import { createData, updateData, getDataById } from '../../firebase/firestore'
+import { auth } from '../../firebase/index'
+import { doc } from 'firebase/firestore'
+import { db } from '../../firebase/index'
+import { Announcement } from '../../types/Announcement'
 
 type CreateFeedNavigationProp = NativeStackNavigationProp<
   MainNavigatorParamList,
@@ -52,21 +57,58 @@ const CreateFeed = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [isPublishing, setIsPublishing] = useState(false)
 
-  // Load existing news data if in edit mode
+  // Load existing announcement data if in edit mode
   useEffect(() => {
-    if (isEditMode && newsId) {
-      const existingNews = getNewsById(newsId)
-      if (existingNews) {
-        setFormData({
-          tag: existingNews.tag,
-          heading: existingNews.heading,
-          subheading: existingNews.subheading,
-          title: existingNews.title,
-          description: existingNews.description,
-        })
+    const loadAnnouncementData = async () => {
+      if (isEditMode && newsId) {
+        try {
+          // Convert newsId to string for Firestore lookup
+          const announcementId = typeof newsId === 'string' ? newsId : newsId.toString()
+          console.log('🔍 Loading announcement for edit with ID:', announcementId)
+
+          // First try to load from Firestore
+          const announcement = await getDataById<Announcement>('announcements', announcementId)
+          if (announcement) {
+            setFormData({
+              tag: announcement.tag,
+              heading: announcement.heading,
+              subheading: announcement.subheading,
+              title: announcement.title,
+              description: announcement.content,
+            })
+          } else {
+            // Fallback to mock data if not found in Firestore
+            const existingNews = getNewsById(newsId)
+            if (existingNews) {
+              setFormData({
+                tag: existingNews.tag,
+                heading: existingNews.heading,
+                subheading: existingNews.subheading,
+                title: existingNews.title,
+                description: existingNews.description,
+              })
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error loading announcement:', error)
+          // Fallback to mock data on error
+          const existingNews = getNewsById(newsId)
+          if (existingNews) {
+            setFormData({
+              tag: existingNews.tag,
+              heading: existingNews.heading,
+              subheading: existingNews.subheading,
+              title: existingNews.title,
+              description: existingNews.description,
+            })
+          }
+        }
       }
     }
+
+    loadAnnouncementData()
   }, [isEditMode, newsId])
 
   const handleAvatarPress = () => {
@@ -107,21 +149,60 @@ const CreateFeed = () => {
       return
     }
 
+    setIsPublishing(true)
+
     try {
-      if (isEditMode) {
-        // Here you would typically call API to update news
-        console.log('Updating news:', newsId, formData)
-        // Simulate potential API error
-        // throw new Error('Failed to update article')
-      } else {
-        // Here you would typically call API to create news
-        console.log('Publishing news:', formData)
-        // Simulate potential API error
-        // throw new Error('Failed to publish article')
+      // Get current user
+      const currentUser = auth.currentUser
+      if (!currentUser) {
+        throw new Error('You must be logged in to publish announcements')
       }
+
+      // Create a reference to the current user in the users collection
+      const userRef = doc(db, 'users', currentUser.uid)
+
+      if (isEditMode) {
+        // Update existing announcement
+        console.log('Updating announcement:', newsId, formData)
+
+        const updatePayload = {
+          announcement_date: new Date(),
+          tag: formData.tag,
+          heading: formData.heading,
+          subheading: formData.subheading,
+          title: formData.title,
+          content: formData.description,
+          posted_by: userRef,
+          updated_at: new Date(),
+        }
+
+        const announcementId = typeof newsId === 'string' ? newsId : newsId!.toString()
+        await updateData('announcements', announcementId, updatePayload)
+        console.log('✅ Announcement updated successfully with ID:', announcementId)
+      } else {
+        // Create new announcement
+        console.log('Publishing announcement:', formData)
+
+        const createPayload = {
+          announcement_date: new Date(),
+          tag: formData.tag,
+          heading: formData.heading,
+          subheading: formData.subheading,
+          title: formData.title,
+          content: formData.description,
+          posted_by: userRef,
+          created_at: new Date(),
+          updated_at: new Date(),
+        }
+
+        const docRef = await createData('announcements', createPayload)
+        console.log('✅ Announcement created successfully with ID:', docRef.id)
+      }
+
       // Show success modal
       setShowSuccessModal(true)
     } catch (error) {
+      console.error('❌ Error publishing announcement:', error)
       // Show error modal
       setErrorMessage(
         error instanceof Error
@@ -129,6 +210,8 @@ const CreateFeed = () => {
           : 'An unexpected error occurred. Please try again.'
       )
       setShowErrorModal(true)
+    } finally {
+      setIsPublishing(false)
     }
   }
 
@@ -357,11 +440,20 @@ const CreateFeed = () => {
         </View>
         <View style={styles.buttonHalf}>
           <Button
-            label={isEditMode ? 'Update Article' : 'Publish Article'}
+            label={
+              isPublishing
+                ? isEditMode
+                  ? 'Updating...'
+                  : 'Publishing...'
+                : isEditMode
+                ? 'Update Article'
+                : 'Publish Article'
+            }
             onPress={handlePublish}
             variant="primary"
             size="large"
             fullWidth
+            disabled={isPublishing}
           />
         </View>
       </View>

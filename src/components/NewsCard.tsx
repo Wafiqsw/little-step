@@ -11,6 +11,7 @@ export interface NewsCardProps {
   subheading: string
   onPress?: () => void
   containerStyle?: ViewStyle
+  showAskQuestion?: boolean
 }
 
 const NewsCard: React.FC<NewsCardProps> = ({
@@ -20,6 +21,7 @@ const NewsCard: React.FC<NewsCardProps> = ({
   subheading,
   onPress,
   containerStyle,
+  showAskQuestion = true,
 }) => {
   // Get tag info (label, colors)
   const getTagInfo = (): {
@@ -102,9 +104,11 @@ const NewsCard: React.FC<NewsCardProps> = ({
       </View>
 
       {/* Row 3: Ask a Question Text */}
-      <View style={styles.row3}>
-        <Text style={styles.askQuestionText}>Ask a Question</Text>
-      </View>
+      {showAskQuestion && (
+        <View style={styles.row3}>
+          <Text style={styles.askQuestionText}>Ask a Question</Text>
+        </View>
+      )}
     </TouchableOpacity>
   )
 }

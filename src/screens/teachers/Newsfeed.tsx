@@ -1,21 +1,72 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native'
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native'
 import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, NewsCard, Button, TeacherNewsCard, ConfirmationModal } from '../../components'
 import { Spacing, Typography, Colors } from '../../constants'
-import { mockNewsData } from '../../data/MockNews'
 import Icon from 'react-native-vector-icons/FontAwesome'
 
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
+import { getAllData, deleteData } from '../../firebase/firestore'
+import { auth } from '../../firebase/index'
+import { Announcement } from '../../types/Announcement'
+import { DocumentReference, getDoc } from 'firebase/firestore'
+import { Users } from '../../types/Users'
 
 type NewsfeedNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'TeacherTabNavigator'>
+
+type AnnouncementWithId = Announcement & { id: string; authorName?: string }
 
 const Newsfeed = () => {
   const navigation = useNavigation<NewsfeedNavigationProp>()
   const [deleteModalVisible, setDeleteModalVisible] = useState(false)
-  const [postToDelete, setPostToDelete] = useState<number | null>(null)
+  const [postToDelete, setPostToDelete] = useState<string | null>(null)
+  const [announcements, setAnnouncements] = useState<AnnouncementWithId[]>([])
+  const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(false)
+
+  // Fetch announcements from Firestore
+  const fetchAnnouncements = async () => {
+    try {
+      setLoading(true)
+      const data = await getAllData<Announcement>('announcements')
+
+      // Fetch author names for all announcements
+      const announcementsWithAuthors = await Promise.all(
+        data.map(async (announcement) => {
+          let authorName = 'Unknown'
+          try {
+            if (announcement.posted_by) {
+              const authorDoc = await getDoc(announcement.posted_by as DocumentReference<Users>)
+              if (authorDoc.exists()) {
+                authorName = authorDoc.data().name
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching author:', error)
+          }
+          return { ...announcement, authorName }
+        })
+      )
+
+      setAnnouncements(announcementsWithAuthors)
+      console.log('✅ Fetched', announcementsWithAuthors.length, 'announcements')
+    } catch (error) {
+      console.error('❌ Error fetching announcements:', error)
+      // Fallback to mock data on error
+      setAnnouncements([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Fetch announcements on mount and when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchAnnouncements()
+    }, [])
+  )
 
   const handleCreatePost = () => {
     navigation.navigate('TeacherCreateFeed')
@@ -25,8 +76,9 @@ const Newsfeed = () => {
     navigation.navigate('TeacherProfile')
   }
 
-  const handleNewsPress = (newsId: number) => {
-    navigation.navigate('TeacherNewsfeedBlog', { newsId })
+  const handleNewsPress = (newsId: string) => {
+    // Pass newsId as string directly - will be used as Firestore document ID
+    navigation.navigate('TeacherNewsfeedBlog', { newsId: newsId as any })
   }
 
   const handleSeeAllMyPosts = () => {
@@ -37,21 +89,35 @@ const Newsfeed = () => {
     navigation.navigate('TeacherAllAnnouncementsList')
   }
 
-  const handleEditPost = (newsId: number) => {
-    navigation.navigate('TeacherCreateFeed', { newsId })
+  const handleEditPost = (newsId: string) => {
+    // Pass newsId as string directly - will be used as Firestore document ID
+    navigation.navigate('TeacherCreateFeed', { newsId: newsId as any })
   }
 
-  const handleDeletePost = (newsId: number) => {
+  const handleDeletePost = (newsId: string) => {
     setPostToDelete(newsId)
     setDeleteModalVisible(true)
   }
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (postToDelete !== null) {
-      console.log('Deleting post:', postToDelete)
-      // TODO: Call API to delete the post
-      setDeleteModalVisible(false)
-      setPostToDelete(null)
+      try {
+        setDeleting(true)
+        console.log('🗑️ Deleting announcement:', postToDelete)
+        await deleteData('announcements', postToDelete)
+        console.log('✅ Announcement deleted successfully')
+
+        // Refresh announcements list
+        await fetchAnnouncements()
+
+        setDeleteModalVisible(false)
+        setPostToDelete(null)
+      } catch (error) {
+        console.error('❌ Error deleting announcement:', error)
+        Alert.alert('Error', 'Failed to delete announcement. Please try again.')
+      } finally {
+        setDeleting(false)
+      }
     }
   }
 
@@ -60,15 +126,18 @@ const Newsfeed = () => {
     setPostToDelete(null)
   }
 
-  // Mock teacher ID - in real app, this would come from auth context
-  const currentTeacherId = 1
+  // Get current user ID
+  const currentUserId = auth.currentUser?.uid
 
   // Filter teacher's own posts
-  const myPosts = mockNewsData.filter(news => news.authorId === currentTeacherId)
+  const myPosts = announcements.filter(announcement => {
+    const postedById = (announcement.posted_by as DocumentReference)?.id
+    return postedById === currentUserId
+  })
   const displayedMyPosts = myPosts.slice(0, 2) // Show only first 2
 
-  // All other posts
-  const allPosts = [...mockNewsData].sort((a, b) => {
+  // All posts sorted by priority
+  const allPosts = [...announcements].sort((a, b) => {
     const priority = { urgent: 0, important: 1, general: 2 } as { [key: string]: number }
     return priority[a.tag] - priority[b.tag]
   })
@@ -91,75 +160,84 @@ const Newsfeed = () => {
           style={styles.createButton}
         />
 
-        {/* My Posts Section */}
-        {myPosts.length > 0 && (
-          <>
-            <View style={styles.sectionHeader}>
-              <Icon name="user-circle" size={20} color={Colors.primary[600]} />
-              <Text style={styles.sectionTitle}>My Posts</Text>
-            </View>
-            {displayedMyPosts.map((news) => (
-              <TeacherNewsCard
-                key={news.id}
-                tag={news.tag}
-                count={news.count}
-                heading={news.heading}
-                subheading={news.subheading}
-                onPress={() => handleNewsPress(news.id)}
-                onEdit={() => handleEditPost(news.id)}
-                onDelete={() => handleDeletePost(news.id)}
-              />
-            ))}
-            {myPosts.length > 2 && (
-              <TouchableOpacity
-                style={styles.seeMoreContainer}
-                onPress={handleSeeAllMyPosts}
-              >
-                <Text style={styles.seeMoreText}>See More</Text>
-                <Icon name="chevron-right" size={14} color={Colors.primary[600]} />
-              </TouchableOpacity>
-            )}
-            <View style={styles.divider} />
-          </>
-        )}
-
-        {/* All News Section */}
-        <View style={styles.sectionHeader}>
-          <Icon name="newspaper-o" size={20} color={Colors.primary[600]} />
-          <Text style={styles.sectionTitle}>All Announcements</Text>
-        </View>
-
-        {/* Display all news articles sorted by priority */}
-        {allPosts.length > 0 ? (
-          <>
-            {displayedAllPosts.map((news) => (
-              <NewsCard
-                key={news.id}
-                tag={news.tag}
-                count={news.count}
-                heading={news.heading}
-                subheading={news.subheading}
-                onPress={() => handleNewsPress(news.id)}
-              />
-            ))}
-            {allPosts.length > 2 && (
-              <TouchableOpacity
-                style={styles.seeMoreContainer}
-                onPress={handleSeeAllAnnouncements}
-              >
-                <Text style={styles.seeMoreText}>See More</Text>
-                <Icon name="chevron-right" size={14} color={Colors.primary[600]} />
-              </TouchableOpacity>
-            )}
-          </>
-        ) : (
-          <View style={styles.emptyState}>
-            <Icon name="newspaper-o" size={64} color={Colors.text.disabled} />
-            <Text style={styles.emptyTitle}>No News Available</Text>
-            <Text style={styles.emptySubtitle}>
-              There are currently no news articles to display. Check back later for updates.
-            </Text>
+        {/* Loading State */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primary[600]} />
+            <Text style={styles.loadingText}>Loading announcements...</Text>
           </View>
+        ) : (
+          <>
+            {/* My Posts Section */}
+            {myPosts.length > 0 && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <Icon name="user-circle" size={20} color={Colors.primary[600]} />
+                  <Text style={styles.sectionTitle}>My Posts</Text>
+                </View>
+                {displayedMyPosts.map((news) => (
+                  <TeacherNewsCard
+                    key={news.id}
+                    tag={news.tag}
+                    heading={news.heading}
+                    subheading={news.subheading}
+                    onPress={() => handleNewsPress(news.id)}
+                    onEdit={() => handleEditPost(news.id)}
+                    onDelete={() => handleDeletePost(news.id)}
+                  />
+                ))}
+                {myPosts.length > 2 && (
+                  <TouchableOpacity
+                    style={styles.seeMoreContainer}
+                    onPress={handleSeeAllMyPosts}
+                  >
+                    <Text style={styles.seeMoreText}>See More</Text>
+                    <Icon name="chevron-right" size={14} color={Colors.primary[600]} />
+                  </TouchableOpacity>
+                )}
+                <View style={styles.divider} />
+              </>
+            )}
+
+            {/* All News Section */}
+            <View style={styles.sectionHeader}>
+              <Icon name="newspaper-o" size={20} color={Colors.primary[600]} />
+              <Text style={styles.sectionTitle}>All Announcements</Text>
+            </View>
+
+            {/* Display all news articles sorted by priority */}
+            {allPosts.length > 0 ? (
+              <>
+                {displayedAllPosts.map((news) => (
+                  <NewsCard
+                    key={news.id}
+                    tag={news.tag}
+                    heading={news.heading}
+                    subheading={news.subheading}
+                    onPress={() => handleNewsPress(news.id)}
+                    showAskQuestion={false}
+                  />
+                ))}
+                {allPosts.length > 2 && (
+                  <TouchableOpacity
+                    style={styles.seeMoreContainer}
+                    onPress={handleSeeAllAnnouncements}
+                  >
+                    <Text style={styles.seeMoreText}>See More</Text>
+                    <Icon name="chevron-right" size={14} color={Colors.primary[600]} />
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <Icon name="newspaper-o" size={64} color={Colors.text.disabled} />
+                <Text style={styles.emptyTitle}>No Announcements Available</Text>
+                <Text style={styles.emptySubtitle}>
+                  There are currently no announcements to display. Create your first post to get started!
+                </Text>
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
 
@@ -168,7 +246,7 @@ const Newsfeed = () => {
         visible={deleteModalVisible}
         title="Delete Post"
         message="Are you sure you want to delete this post? This action cannot be undone."
-        confirmText="Delete"
+        confirmText={deleting ? "Deleting..." : "Delete"}
         cancelText="Cancel"
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
@@ -197,6 +275,16 @@ const styles = StyleSheet.create({
   },
   createButton: {
     marginBottom: Spacing.md,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl * 2,
+    gap: Spacing.md,
+  },
+  loadingText: {
+    fontSize: Typography.body.medium.fontSize as number,
+    color: Colors.text.secondary,
   },
   sectionHeader: {
     flexDirection: 'row',

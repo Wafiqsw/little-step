@@ -1,48 +1,201 @@
-import { View, Text, StyleSheet, ScrollView, TextInput } from 'react-native'
-import React from 'react'
+import { View, Text, StyleSheet, ScrollView, TextInput, ActivityIndicator } from 'react-native'
+import React, { useState, useEffect } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, Button, QuestionCard } from '../../components'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
 import Icon from 'react-native-vector-icons/FontAwesome'
-import { mockNewsData, getNewsById } from '../../data/MockNews'
+import { getNewsById } from '../../data/MockNews'
 import { RouteProp, useRoute } from '@react-navigation/native'
 import { MainNavigatorParamList } from '../../navigation/type'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { getDataById } from '../../firebase/firestore'
+import { Announcement } from '../../types/Announcement'
+import { DocumentReference, getDoc, Timestamp } from 'firebase/firestore'
+import { Users } from '../../types/Users'
 
 type NewsfeedBlogNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'TeacherNewsfeedBlog'>
 type NewsfeedBlogRouteProp = RouteProp<MainNavigatorParamList, 'TeacherNewsfeedBlog'>
+
+type AnnouncementData = {
+  id: string
+  tag: 'urgent' | 'important' | 'general'
+  heading: string
+  subheading: string
+  title: string
+  content: string
+  date: string
+  author: string
+  qna: any[]
+}
 
 const NewsfeedBlog = () => {
   const route = useRoute<NewsfeedBlogRouteProp>()
   const newsId = route.params?.newsId
   const navigation = useNavigation<NewsfeedBlogNavigationProp>()
 
+  const [announcement, setAnnouncement] = useState<AnnouncementData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [answerText, setAnswerText] = useState('')
+  const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null)
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [showAllQuestions, setShowAllQuestions] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
   const handleAvatarPress = () => {
     navigation.navigate('TeacherProfile')
   }
 
-  const [answerText, setAnswerText] = React.useState('')
-  const [selectedQuestionId, setSelectedQuestionId] = React.useState<number | null>(null)
-  const [isExpanded, setIsExpanded] = React.useState(false)
-  const [showAllQuestions, setShowAllQuestions] = React.useState(false)
+  // Fetch announcement from Firestore
+  useEffect(() => {
+    const fetchAnnouncement = async () => {
+      try {
+        setLoading(true)
 
-  // Get news data from mock data using the newsId
-  const newsData = newsId ? getNewsById(newsId) : mockNewsData[0]
+        if (!newsId) {
+          setLoading(false)
+          return
+        }
 
-  // Fallback if news not found
-  if (!newsData) {
+        // Convert newsId to string for Firestore lookup
+        const announcementId = typeof newsId === 'string' ? newsId : newsId.toString()
+        console.log('🔍 Fetching announcement with ID:', announcementId)
+
+        // Try to fetch from Firestore
+        const firestoreData = await getDataById<Announcement>('announcements', announcementId)
+
+        if (firestoreData) {
+          // Fetch author name
+          let authorName = 'Unknown'
+          try {
+            if (firestoreData.posted_by) {
+              const authorDoc = await getDoc(firestoreData.posted_by as DocumentReference<Users>)
+              if (authorDoc.exists()) {
+                authorName = authorDoc.data().name
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching author:', error)
+          }
+
+          // Format date - handle Firestore Timestamp
+          let date = 'No date'
+          // Use announcement_date (snake_case) to match Firestore field name
+          const dateField = (firestoreData as any).announcement_date
+          console.log('📅 Raw date field:', dateField, 'Type:', typeof dateField)
+
+          if (dateField) {
+            try {
+              const dateValue: any = dateField
+              // Check if it's a Firestore Timestamp
+              if (dateValue instanceof Timestamp) {
+                date = dateValue.toDate().toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })
+              } else if (dateValue instanceof Date) {
+                date = dateValue.toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })
+              } else if (typeof dateValue === 'object' && dateValue.seconds) {
+                // Handle Timestamp-like object
+                date = new Date(dateValue.seconds * 1000).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })
+              }
+              console.log('📅 Formatted date:', date)
+            } catch (error) {
+              console.error('Error formatting date:', error)
+              date = 'Invalid date'
+            }
+          } else {
+            console.log('❌ No date field found in Firestore data')
+          }
+
+          setAnnouncement({
+            id: firestoreData.id,
+            tag: firestoreData.tag,
+            heading: firestoreData.heading,
+            subheading: firestoreData.subheading,
+            title: firestoreData.title,
+            content: firestoreData.content,
+            date,
+            author: authorName,
+            qna: [] // Q&A will be implemented later
+          })
+        } else {
+          // Fallback to mock data
+          const mockData = getNewsById(newsId)
+          if (mockData) {
+            setAnnouncement({
+              id: mockData.id.toString(),
+              tag: mockData.tag,
+              heading: mockData.heading,
+              subheading: mockData.subheading,
+              title: mockData.title,
+              content: mockData.description,
+              date: mockData.date,
+              author: mockData.author,
+              qna: mockData.qna
+            })
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error fetching announcement:', error)
+        // Fallback to mock data on error
+        const mockData = newsId ? getNewsById(newsId) : null
+        if (mockData) {
+          setAnnouncement({
+            id: mockData.id.toString(),
+            tag: mockData.tag,
+            heading: mockData.heading,
+            subheading: mockData.subheading,
+            title: mockData.title,
+            content: mockData.description,
+            date: mockData.date,
+            author: mockData.author,
+            qna: mockData.qna
+          })
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAnnouncement()
+  }, [newsId])
+
+  // Loading state
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header showBackButton={true} onAvatarPress={handleAvatarPress}/>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>News article not found</Text>
+        <Header showBackButton={true} onAvatarPress={handleAvatarPress} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary[600]} />
+          <Text style={styles.loadingText}>Loading announcement...</Text>
         </View>
       </SafeAreaView>
     )
   }
 
-  const qnaData = newsData.qna
+  // Fallback if announcement not found
+  if (!announcement) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header showBackButton={true} onAvatarPress={handleAvatarPress}/>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Announcement not found</Text>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  const qnaData = announcement.qna
 
   const getTagColor = (tag: 'urgent' | 'important' | 'general') => {
     switch (tag) {
@@ -64,18 +217,27 @@ const NewsfeedBlog = () => {
     }
   }
 
-  const tagStyle = getTagColor(newsData.tag)
+  const tagStyle = getTagColor(announcement.tag)
 
-  const handleAnswerSubmit = (questionId: number) => {
+  const handleAnswerSubmit = async (questionId: number) => {
     if (!answerText.trim()) {
       console.log('Please enter an answer')
       return
     }
 
-    console.log('Answer submitted for question:', questionId, 'Answer:', answerText)
-    // Here you would typically call API to submit answer
-    setAnswerText('')
-    setSelectedQuestionId(null)
+    setSubmitting(true)
+    try {
+      console.log('Answer submitted for question:', questionId, 'Answer:', answerText)
+      // Here you would typically call API to submit answer to Firestore
+      // TODO: Implement Q&A submission to Firestore
+
+      setAnswerText('')
+      setSelectedQuestionId(null)
+    } catch (error) {
+      console.error('❌ Error submitting answer:', error)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleCancelAnswer = () => {
@@ -99,17 +261,17 @@ const NewsfeedBlog = () => {
             </View>
             <View style={styles.dateContainer}>
               <Icon name="calendar" size={14} color={Colors.text.secondary} />
-              <Text style={styles.dateText}>{newsData.date}</Text>
+              <Text style={styles.dateText}>{announcement.date}</Text>
             </View>
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>{newsData.title}</Text>
+          <Text style={styles.title}>{announcement.title}</Text>
 
           {/* Author */}
           <View style={styles.authorContainer}>
             <Icon name="user-circle" size={16} color={Colors.text.secondary} />
-            <Text style={styles.authorText}>Written by {newsData.author}</Text>
+            <Text style={styles.authorText}>Written by {announcement.author}</Text>
           </View>
         </View>
 
@@ -123,13 +285,16 @@ const NewsfeedBlog = () => {
             numberOfLines={isExpanded ? undefined : 5}
             ellipsizeMode="tail"
           >
-            {newsData.description}
+            {announcement.content}
           </Text>
-          <Button
-            label={isExpanded ? 'See Less' : 'See More'}
-            variant="secondary"
-            onPress={() => setIsExpanded(!isExpanded)}
-          />
+          {/* Only show See More/Less button if content is long enough */}
+          {announcement.content.length > 300 && (
+            <Button
+              label={isExpanded ? 'See Less' : 'See More'}
+              variant="secondary"
+              onPress={() => setIsExpanded(!isExpanded)}
+            />
+          )}
         </View>
 
 
@@ -178,12 +343,14 @@ const NewsfeedBlog = () => {
                         variant="secondary"
                         onPress={handleCancelAnswer}
                         style={styles.answerButton}
+                        disabled={submitting}
                       />
                       <Button
-                        label="Submit Answer"
+                        label={submitting ? "Submitting..." : "Submit Answer"}
                         variant="primary"
                         onPress={() => handleAnswerSubmit(item.id)}
                         style={styles.answerButton}
+                        disabled={submitting}
                       />
                     </View>
                   </View>
@@ -341,6 +508,17 @@ const styles = StyleSheet.create({
   },
   answerButton: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+    gap: Spacing.md,
+  },
+  loadingText: {
+    fontSize: Typography.body.medium.fontSize as number,
+    color: Colors.text.secondary,
   },
   errorContainer: {
     flex: 1,
