@@ -89,7 +89,7 @@ const PickupCard = ({
                             <View style={styles.detailRow}>
                                 <Icon name="user" size={18} color={Colors.text.secondary} />
                                 <View style={styles.detailTextContainer}>
-                                    <Text style={styles.detailLabel}>Pickup Person</Text>
+                                    <Text style={styles.detailLabel}>Name</Text>
                                     <Text style={styles.detailValue}>{name}</Text>
                                 </View>
                             </View>

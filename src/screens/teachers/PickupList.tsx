@@ -7,8 +7,10 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import { db } from '../../firebase'
-import { collection, query, where, getDocs, Timestamp, doc } from 'firebase/firestore'
+import { collection, query, where, getDocs, getDoc, Timestamp, doc } from 'firebase/firestore'
 import type { Attendance } from '../../types/Attendance'
+import type { Student } from '../../types/Student'
+import type { Users } from '../../types/Users'
 
 type PickupListNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'TeacherTabNavigator'>
 
@@ -62,11 +64,21 @@ const PickupList = () => {
           const studentDoc = await getDocs(query(collection(db, 'students'), where('__name__', '==', studentId)))
 
           if (!studentDoc.empty) {
-            const studentData = studentDoc.docs[0].data()
+            const studentData = studentDoc.docs[0].data() as Student
 
-            // TODO: Fetch guardian name from student's parent reference
-            // For now, use placeholder
-            const guardianName = 'Parent Name' // Will be fetched from parent reference
+            // Fetch guardian name from student's parent reference
+            let guardianName = 'Unknown Parent'
+            if (studentData.guardian) {
+              try {
+                const guardianDoc = await getDoc(studentData.guardian)
+                if (guardianDoc.exists()) {
+                  const guardianData = guardianDoc.data() as Users
+                  guardianName = guardianData.name || 'Unknown Parent'
+                }
+              } catch (error) {
+                console.error('Error fetching guardian data:', error)
+              }
+            }
 
             pickupData.push({
               id: studentId,
@@ -148,7 +160,7 @@ const PickupList = () => {
               ))
             ) : (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>Takde students waiting for pickup</Text>
+                <Text style={styles.emptyText}>No students waiting for pickup</Text>
               </View>
             )}
           </View>
@@ -177,7 +189,7 @@ const PickupList = () => {
               ))
             ) : (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>Takde students picked up yet</Text>
+                <Text style={styles.emptyText}>No students picked up yet</Text>
               </View>
             )}
           </View>
