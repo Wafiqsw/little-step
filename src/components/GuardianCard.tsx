@@ -13,13 +13,14 @@ interface GuardianCardProps {
     variant: 'parent' | 'pickup'
     phoneNumber?: string
     isArchived?: boolean
+    isReadOnly?: boolean
     onPress?: () => void
     onSave?: (data: { name: string; phoneNumber: string; relationship: string }) => void
     onArchive?: () => void
     onDelete?: () => void
 }
 
-const GuardianCard = ({ name, relationship, variant, phoneNumber = '', isArchived = false, onPress, onSave, onArchive, onDelete }: GuardianCardProps) => {
+const GuardianCard = ({ name, relationship, variant, phoneNumber = '', isArchived = false, isReadOnly = false, onPress, onSave, onArchive, onDelete }: GuardianCardProps) => {
     const [modalVisible, setModalVisible] = useState(false)
     const [showMoreMenu, setShowMoreMenu] = useState(false)
     const [nameValue, setNameValue] = useState(name)
@@ -101,16 +102,18 @@ const GuardianCard = ({ name, relationship, variant, phoneNumber = '', isArchive
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Edit Guardian</Text>
-                            <TouchableOpacity
-                                style={styles.moreButton}
-                                onPress={() => setShowMoreMenu(!showMoreMenu)}
-                                activeOpacity={0.7}
-                            >
-                                <Icon name="ellipsis-v" size={20} color={Colors.text.primary} />
-                            </TouchableOpacity>
+                            <Text style={styles.modalTitle}>{isReadOnly ? 'View Guardian' : 'Edit Guardian'}</Text>
+                            {!isReadOnly && (
+                                <TouchableOpacity
+                                    style={styles.moreButton}
+                                    onPress={() => setShowMoreMenu(!showMoreMenu)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Icon name="ellipsis-v" size={20} color={Colors.text.primary} />
+                                </TouchableOpacity>
+                            )}
 
-                            {showMoreMenu && (
+                            {!isReadOnly && showMoreMenu && (
                                 <View style={styles.dropdownMenu}>
                                     <TouchableOpacity
                                         style={styles.dropdownItem}
@@ -142,52 +145,63 @@ const GuardianCard = ({ name, relationship, variant, phoneNumber = '', isArchive
                         <View style={styles.inputContainer}>
                             <Text style={styles.inputLabel}>Name</Text>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, isReadOnly && styles.inputReadOnly]}
                                 value={nameValue}
                                 onChangeText={setNameValue}
                                 placeholder="Enter name"
                                 placeholderTextColor={Colors.text.hint}
+                                editable={!isReadOnly}
                             />
                         </View>
 
                         <View style={styles.inputContainer}>
                             <Text style={styles.inputLabel}>Phone Number</Text>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, isReadOnly && styles.inputReadOnly]}
                                 value={phone}
                                 onChangeText={setPhone}
                                 placeholder="Enter phone number"
                                 placeholderTextColor={Colors.text.hint}
                                 keyboardType="phone-pad"
+                                editable={!isReadOnly}
                             />
                         </View>
 
                         <View style={styles.inputContainer}>
                             <Text style={styles.inputLabel}>Relationship</Text>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, isReadOnly && styles.inputReadOnly]}
                                 value={relationshipValue}
                                 onChangeText={setRelationshipValue}
                                 placeholder="Enter relationship"
                                 placeholderTextColor={Colors.text.hint}
+                                editable={!isReadOnly}
                             />
                         </View>
 
                         <View style={styles.bottomSection}>
-                            <View style={styles.mainButtonsContainer}>
+                            {isReadOnly ? (
                                 <Button
-                                    label="Discard"
+                                    label="Close"
                                     onPress={handleDiscard}
-                                    variant="secondary"
-                                    style={styles.buttonFlex}
-                                />
-                                <Button
-                                    label="Save"
-                                    onPress={handleSave}
                                     variant="primary"
-                                    style={styles.buttonFlex}
                                 />
-                            </View>
+                            ) : (
+                                <View style={styles.mainButtonsContainer}>
+                                    <Button
+                                        label="Discard"
+                                        onPress={handleDiscard}
+                                        variant="secondary"
+                                        style={styles.buttonFlex}
+                                    />
+                                    <Button
+                                        label="Save"
+                                        onPress={handleSave}
+                                        variant="primary"
+                                        style={styles.buttonFlex}
+                                    />
+                                </View>
+                            )}
                         </View>
                     </View>
                 </View>
@@ -326,6 +340,10 @@ const styles = StyleSheet.create({
         fontSize: FontSize.base,
         color: Colors.text.primary,
         backgroundColor: Colors.white,
+    },
+    inputReadOnly: {
+        backgroundColor: '#F5F5F5',
+        color: Colors.text.secondary,
     },
     bottomSection: {
         borderTopWidth: 1,

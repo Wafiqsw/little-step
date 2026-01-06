@@ -182,7 +182,7 @@ const PickupList = () => {
       >
         <Text style={styles.dashboardTitle}>Guardian List</Text>
 
-        {/* Parent Section - Show fathers and mothers only */}
+        {/* Parent Section - Show current user first, then fathers and mothers */}
         <Text style={styles.sectionTitle}>Parent</Text>
 
         {isLoading || isSaving ? (
@@ -192,29 +192,47 @@ const PickupList = () => {
               {isLoading ? 'Loading parents...' : 'Saving changes...'}
             </Text>
           </View>
-        ) : authorisedPersons.filter((person) =>
-            person.relationship.toLowerCase() === 'mother' ||
-            person.relationship.toLowerCase() === 'father'
-          ).length > 0 ? (
-          authorisedPersons
-            .filter((person) =>
-              person.relationship.toLowerCase() === 'mother' ||
-              person.relationship.toLowerCase() === 'father'
-            )
-            .map((person) => (
-              <GuardianCard
-                key={person.id}
-                name={person.name}
-                relationship={person.relationship}
-                phoneNumber={typeof person.numphone === 'string' ? person.numphone : '-'}
-                variant="parent"
-                onSave={(data) => handleSave(person.id, data)}
-                onArchive={() => handleArchiveClick(person.id, person.name)}
-                onDelete={() => handleDeleteClick(person.id, person.name)}
-              />
-            ))
         ) : (
-          <Text style={styles.emptyText}>No parents added yet</Text>
+          <>
+            {/* Show current user (main parent) first */}
+            {userProfile && (
+              <GuardianCard
+                key="current-user"
+                name={userProfile.name || 'Unknown'}
+                relationship="You"
+                phoneNumber={userProfile.numphone || '-'}
+                variant="parent"
+                isReadOnly={true}
+              />
+            )}
+
+            {/* Show other authorized parents (fathers and mothers) */}
+            {authorisedPersons
+              .filter((person) =>
+                person.relationship.toLowerCase() === 'mother' ||
+                person.relationship.toLowerCase() === 'father'
+              )
+              .map((person) => (
+                <GuardianCard
+                  key={person.id}
+                  name={person.name}
+                  relationship={person.relationship}
+                  phoneNumber={typeof person.numphone === 'string' ? person.numphone : '-'}
+                  variant="parent"
+                  onSave={(data) => handleSave(person.id, data)}
+                  onArchive={() => handleArchiveClick(person.id, person.name)}
+                  onDelete={() => handleDeleteClick(person.id, person.name)}
+                />
+              ))}
+
+            {/* Empty state only if no current user profile */}
+            {!userProfile && authorisedPersons.filter((person) =>
+                person.relationship.toLowerCase() === 'mother' ||
+                person.relationship.toLowerCase() === 'father'
+              ).length === 0 && (
+              <Text style={styles.emptyText}>No parents added yet</Text>
+            )}
+          </>
         )}
 
         <View style={styles.divider} />

@@ -19,37 +19,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    console.log('🔥 AuthProvider mounted - non-blocking mode');
+    console.log('🔥 AuthProvider mounted');
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log('👤 Auth state changed:', firebaseUser ? `User: ${firebaseUser.uid}` : 'No user');
       setUser(firebaseUser);
 
       if (firebaseUser) {
-        // Fetch user profile from Firestore asynchronously (non-blocking)
-        getDataById<Users>('users', firebaseUser.uid)
-          .then(profile => {
-            console.log('✅ User profile fetched:', profile ? profile.role : 'null');
-            setUserProfile(profile);
-          })
-          .catch(error => {
-            console.error('❌ Error fetching user profile:', error);
-            setUserProfile(null);
-          });
+        // Fetch user profile from Firestore
+        try {
+          const profile = await getDataById<Users>('users', firebaseUser.uid);
+          console.log('✅ User profile fetched:', profile ? profile.role : 'null');
+          setUserProfile(profile);
+        } catch (error) {
+          console.error('❌ Error fetching user profile:', error);
+          setUserProfile(null);
+        }
       } else {
         // Clear user profile when logged out
         console.log('🧹 Clearing user profile');
         setUserProfile(null);
       }
 
-      // Mark as initialized immediately after setting user
-      if (!isInitialized) {
-        console.log('✅ Auth initialized');
-        setIsInitialized(true);
-      }
+      // Mark as initialized AFTER user profile is loaded
+      setIsInitialized(true);
+      console.log('✅ Auth initialized');
     });
 
     return () => unsubscribe();
-  }, [isInitialized]);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, userProfile, isInitialized, setUserProfile }}>

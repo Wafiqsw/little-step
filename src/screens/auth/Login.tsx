@@ -67,18 +67,13 @@ const Login = () => {
             const userProfile = await getDataById<Users>("users", uid)
             console.log('User Info', JSON.stringify(userProfile))
 
-
-            // Navigate based on user role
+            // Auth persistence is handled by AuthProvider + MainNavigator
+            // No need to manually navigate - the navigator will automatically
+            // show the correct screen based on user role
             if (userProfile && userProfile.role) {
-                if (userProfile.role === 'guardian') {
-                    console.log('🔄 Navigating to Parent Tab Navigator')
-                    navigation.replace('ParentTabNavigator')
-                } else if (userProfile.role === 'teacher') {
-                    console.log('🔄 Navigating to Teacher Tab Navigator')
-                    navigation.replace('TeacherTabNavigator')
-                } else {
-                    console.log('⚠️ Unknown role:', userProfile.role)
-                }
+                console.log('✅ Login successful - role:', userProfile.role)
+                console.log('   AuthProvider will automatically navigate to correct screen')
+                // MainNavigator will detect the auth state change and show the right tab
             } else {
                 console.log('⚠️ No user profile found in Firestore or missing role')
                 setErrors({ ...errors, email: 'User profile not found. Please contact support.' })
