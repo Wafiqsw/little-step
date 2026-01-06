@@ -18,6 +18,7 @@ type StudentPickupData = {
   id: string
   studentName: string
   guardianName: string
+  guardianUid: string
   hasArrived: boolean
   pickupTime?: string
   pickupStatus: boolean
@@ -68,12 +69,14 @@ const PickupList = () => {
 
             // Fetch guardian name from student's parent reference
             let guardianName = 'Unknown Parent'
+            let guardianUid = ''
             if (studentData.guardian) {
               try {
                 const guardianDoc = await getDoc(studentData.guardian)
                 if (guardianDoc.exists()) {
                   const guardianData = guardianDoc.data() as Users
                   guardianName = guardianData.name || 'Unknown Parent'
+                  guardianUid = studentData.guardian.id
                 }
               } catch (error) {
                 console.error('Error fetching guardian data:', error)
@@ -84,6 +87,7 @@ const PickupList = () => {
               id: studentId,
               studentName: studentData.name || 'Unknown Student',
               guardianName,
+              guardianUid,
               hasArrived: data.arrival_status || false,
               pickupTime: data.pickup_time instanceof Timestamp
                 ? data.pickup_time.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
@@ -155,6 +159,7 @@ const PickupList = () => {
                   studentName={pickup.studentName}
                   variant="parent"
                   hasArrived={pickup.hasArrived}
+                  guardianUid={pickup.guardianUid}
                   onPress={() => console.log('Pickup pressed:', pickup.studentName)}
                 />
               ))
@@ -184,6 +189,7 @@ const PickupList = () => {
                   studentName={pickup.studentName}
                   variant="pickup"
                   pickupTime={pickup.pickupTime}
+                  guardianUid={pickup.guardianUid}
                   onPress={() => console.log('Picked up student pressed:', pickup.studentName)}
                 />
               ))
