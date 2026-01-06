@@ -15,7 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import Icon from 'react-native-vector-icons/FontAwesome'
 import { auth } from '../../firebase'
-import { getDataById, updateData } from '../../firebase/firestore'
+import { getDataByIdWithCache, updateDataWithCache } from '../../firebase/firestoreWithCache'
 import { Users } from '../../types/Users'
 
 type ManageProfileNavigationProp = NativeStackNavigationProp<
@@ -50,7 +50,7 @@ const ManageProfile = () => {
           return
         }
 
-        const userData = await getDataById<Users>('users', currentUser.uid)
+        const userData = await getDataByIdWithCache<Users>('users', currentUser.uid, { useCache: true })
         if (userData) {
           setFormData({
             name: userData.name || '',
@@ -85,8 +85,8 @@ const ManageProfile = () => {
         return
       }
 
-      // Update user data in Firestore
-      await updateData('users', currentUser.uid, {
+      // Update user data in Firestore using cache
+      await updateDataWithCache('users', currentUser.uid, {
         name: formData.name,
         numphone: formData.numphone,
         ic: formData.ic,

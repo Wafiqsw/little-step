@@ -6,8 +6,9 @@ import { Spacing, Typography, Colors } from '../../constants'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
-import { collection, query, where, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { db, auth } from '../../firebase'
+import { doc, where } from 'firebase/firestore'
+import { queryWithCache, updateDataWithCache, deleteDataWithCache } from '../../firebase/firestoreWithCache'
 import { AuthorisedPerson } from '../../types/AuthorisedPerson'
 import { useAuth } from '../../context/AuthProvider'
 
@@ -43,21 +44,15 @@ const PickupList = () => {
       // Create reference to current user
       const userRef = doc(db, 'users', currentUser.uid)
 
-      // Query authorized persons where assigned_by equals current user and not archived
-      const authorisedRef = collection(db, 'authorised_person')
-      const authorisedQuery = query(
-        authorisedRef,
-        where('assigned_by', '==', userRef),
-        where('archived', '==', false)
+      // Query authorized persons where assigned_by equals current user and not archived using cache
+      const authorisedData = await queryWithCache(
+        'authorised_person',
+        [where('assigned_by', '==', userRef), where('archived', '==', false)],
+        `authorised_person:user:${currentUser.uid}`,
+        { useCache: true }
       )
-      const authorisedSnapshot = await getDocs(authorisedQuery)
 
-      const authorisedData = authorisedSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as (AuthorisedPerson & { id: string })[]
-
-      setAuthorisedPersons(authorisedData)
+      setAuthorisedPersons(authorisedData as (AuthorisedPerson & { id: string })[])
       console.log(`✅ Fetched ${authorisedData.length} authorized persons`)
     } catch (error) {
       console.error('Error fetching authorized persons:', error)
@@ -78,8 +73,8 @@ const PickupList = () => {
     try {
       setIsSaving(true)
 
-      // Update document in Firestore
-      await updateDoc(doc(db, 'authorised_person', id), {
+      // Update document in Firestore using cache
+      await updateDataWithCache('authorised_person', id, {
         name: data.name.trim(),
         relationship: data.relationship.trim(),
         numphone: data.phoneNumber.trim(),
@@ -112,8 +107,8 @@ const PickupList = () => {
       try {
         setIsSaving(true)
 
-        // Update archived field to true
-        await updateDoc(doc(db, 'authorised_person', selectedGuardianId), {
+        // Update archived field to true using cache
+        await updateDataWithCache('authorised_person', selectedGuardianId, {
           archived: true
         })
 
@@ -147,8 +142,8 @@ const PickupList = () => {
       try {
         setIsSaving(true)
 
-        // Delete document from Firestore
-        await deleteDoc(doc(db, 'authorised_person', selectedGuardianId))
+        // Delete document from Firestore using cache
+        await deleteDataWithCache('authorised_person', selectedGuardianId)
 
         console.log('✅ Guardian deleted successfully:', selectedGuardianId)
 
@@ -227,11 +222,11 @@ const PickupList = () => {
 
             {/* Empty state only if no current user profile */}
             {!userProfile && authorisedPersons.filter((person) =>
-                person.relationship.toLowerCase() === 'mother' ||
-                person.relationship.toLowerCase() === 'father'
-              ).length === 0 && (
-              <Text style={styles.emptyText}>No parents added yet</Text>
-            )}
+              person.relationship.toLowerCase() === 'mother' ||
+              person.relationship.toLowerCase() === 'father'
+            ).length === 0 && (
+                <Text style={styles.emptyText}>No parents added yet</Text>
+              )}
           </>
         )}
 
@@ -248,9 +243,9 @@ const PickupList = () => {
             </Text>
           </View>
         ) : authorisedPersons.filter((person) =>
-            person.relationship.toLowerCase() !== 'mother' &&
-            person.relationship.toLowerCase() !== 'father'
-          ).length > 0 ? (
+          person.relationship.toLowerCase() !== 'mother' &&
+          person.relationship.toLowerCase() !== 'father'
+        ).length > 0 ? (
           authorisedPersons
             .filter((person) =>
               person.relationship.toLowerCase() !== 'mother' &&

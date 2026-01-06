@@ -11,7 +11,7 @@ import { collection, query, where, getDocs, doc } from 'firebase/firestore'
 import { db, auth } from '../../firebase'
 import { Student } from '../../types/Student'
 import { Users } from '../../types/Users'
-import { getDataById } from '../../firebase/firestore'
+import { getDataByIdWithCache } from '../../firebase/firestoreWithCache'
 
 import { useAuth } from '../../context/AuthProvider';
 
@@ -42,7 +42,7 @@ const ParentProfile = () => {
         return
       }
 
-      const userData = await getDataById<Users>('users', currentUser.uid)
+      const userData = await getDataByIdWithCache<Users>('users', currentUser.uid, { useCache: true })
       if (userData && setUserProfile) {
         setUserProfile(userData)
         console.log('✅ User profile refreshed')

@@ -36,9 +36,6 @@ const MainNavigator = () => {
       {user && userProfile ? (
         // Authenticated screens - conditionally render based on role
         <>
-          {/* Common Screens */}
-          <Stack.Screen component={Playground} name='Playground' />
-
           {userProfile.role === 'guardian' ? (
             // Parent Navigation
             <>
@@ -72,6 +69,9 @@ const MainNavigator = () => {
               <Stack.Screen component={TeacherAddStudentStep3Student} name='TeacherAddStudentStep3Student' />
             </>
           )}
+
+          {/* Common Screens - Available to both roles */}
+          <Stack.Screen component={Playground} name='Playground' />
         </>
       ) : (
         // Unauthenticated screens

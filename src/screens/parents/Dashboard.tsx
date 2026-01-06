@@ -10,7 +10,8 @@ import { CompositeNavigationProp } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import { db, auth } from '../../firebase'
-import { collection, query, where, getDocs, doc, DocumentReference, Timestamp, updateDoc } from 'firebase/firestore'
+import { doc, DocumentReference, Timestamp, where } from 'firebase/firestore'
+import { queryWithCache, updateDataWithCache } from '../../firebase/firestoreWithCache'
 import { Student } from '../../types/Student'
 import { Attendance } from '../../types/Attendance'
 
@@ -51,23 +52,23 @@ const Dashboard = () => {
       today.setHours(0, 0, 0, 0)
 
       const studentRef = doc(db, 'students', studentId)
-      const attendanceQuery = query(
-        collection(db, 'attendance'),
-        where('student_ref', '==', studentRef)
+      const attendanceData = await queryWithCache(
+        'attendance',
+        [where('student_ref', '==', studentRef)],
+        `attendance:student:${studentId}`,
+        { useCache: true }
       )
-      const attendanceSnapshot = await getDocs(attendanceQuery)
 
       // Find today's record
-      const todayRecord = attendanceSnapshot.docs.find((docSnap) => {
-        const data = docSnap.data() as Attendance
+      const todayRecord = attendanceData.find((record) => {
         let recordDate: Date
 
-        if (data.date instanceof Timestamp) {
-          recordDate = data.date.toDate()
-        } else if (data.date instanceof Date) {
-          recordDate = data.date
-        } else if (typeof data.date === 'object' && (data.date as any).seconds) {
-          recordDate = new Date((data.date as any).seconds * 1000)
+        if (record.date instanceof Timestamp) {
+          recordDate = record.date.toDate()
+        } else if (record.date instanceof Date) {
+          recordDate = record.date
+        } else if (typeof record.date === 'object' && (record.date as any).seconds) {
+          recordDate = new Date((record.date as any).seconds * 1000)
         } else {
           return false
         }
@@ -77,8 +78,8 @@ const Dashboard = () => {
       })
 
       if (todayRecord) {
-        // Update the attendance document with arrival status
-        await updateDoc(todayRecord.ref, {
+        // Update the attendance document with arrival status using cache
+        await updateDataWithCache('attendance', todayRecord.id, {
           arrival_status: true,
           arrival_time: new Date(),
         })
@@ -105,23 +106,23 @@ const Dashboard = () => {
       today.setHours(0, 0, 0, 0)
 
       const studentRef = doc(db, 'students', studentId)
-      const attendanceQuery = query(
-        collection(db, 'attendance'),
-        where('student_ref', '==', studentRef)
+      const attendanceData = await queryWithCache(
+        'attendance',
+        [where('student_ref', '==', studentRef)],
+        `attendance:student:${studentId}`,
+        { useCache: true }
       )
-      const attendanceSnapshot = await getDocs(attendanceQuery)
 
       // Find today's record
-      const todayRecord = attendanceSnapshot.docs.find((docSnap) => {
-        const data = docSnap.data() as Attendance
+      const todayRecord = attendanceData.find((record) => {
         let recordDate: Date
 
-        if (data.date instanceof Timestamp) {
-          recordDate = data.date.toDate()
-        } else if (data.date instanceof Date) {
-          recordDate = data.date
-        } else if (typeof data.date === 'object' && (data.date as any).seconds) {
-          recordDate = new Date((data.date as any).seconds * 1000)
+        if (record.date instanceof Timestamp) {
+          recordDate = record.date.toDate()
+        } else if (record.date instanceof Date) {
+          recordDate = record.date
+        } else if (typeof record.date === 'object' && (record.date as any).seconds) {
+          recordDate = new Date((record.date as any).seconds * 1000)
         } else {
           return false
         }
@@ -131,8 +132,8 @@ const Dashboard = () => {
       })
 
       if (todayRecord) {
-        // Update the attendance document with pickup status
-        await updateDoc(todayRecord.ref, {
+        // Update the attendance document with pickup status using cache
+        await updateDataWithCache('attendance', todayRecord.id, {
           pickup_status: true,
           pickup_time: new Date(),
         })
@@ -210,45 +211,46 @@ const Dashboard = () => {
       const endOfDay = new Date()
       endOfDay.setHours(23, 59, 59, 999)
 
-      // Fetch all students for this parent
+      // Fetch all students for this parent using cache
       const userRef = doc(db, 'users', currentUser.uid)
-      const studentsQuery = query(
-        collection(db, 'students'),
-        where('guardian', '==', userRef)
+      const studentsData = await queryWithCache(
+        'students',
+        [where('guardian', '==', userRef)],
+        `students:guardian:${currentUser.uid}`,
+        { useCache: true }
       )
-      const studentsSnapshot = await getDocs(studentsQuery)
 
-      if (studentsSnapshot.empty) {
+      if (studentsData.length === 0) {
         console.log('ℹ️ No children found for this parent')
         setStudentsPickupStatus([])
         return
       }
 
-      // For each student, fetch today's attendance
+      // For each student, fetch today's attendance using cache
       const pickupStatusData: StudentPickupStatus[] = await Promise.all(
-        studentsSnapshot.docs.map(async (studentDoc) => {
-          const studentData = studentDoc.data() as Student
-          const studentId = studentDoc.id
-          const studentName = studentData.name
+        studentsData.map(async (student) => {
+          const studentId = student.id
+          const studentName = student.name
+          const studentRef = doc(db, 'students', studentId)
 
-          // Fetch today's attendance record
-          const attendanceQuery = query(
-            collection(db, 'attendance'),
-            where('student_ref', '==', studentDoc.ref)
+          // Fetch attendance records for this student using cache
+          const attendanceData = await queryWithCache(
+            'attendance',
+            [where('student_ref', '==', studentRef)],
+            `attendance:student:${studentId}`,
+            { useCache: true }
           )
-          const attendanceSnapshot = await getDocs(attendanceQuery)
 
           // Find today's record
-          const todayRecord = attendanceSnapshot.docs.find((doc) => {
-            const data = doc.data() as Attendance
+          const todayRecord = attendanceData.find((record) => {
             let recordDate: Date
 
-            if (data.date instanceof Timestamp) {
-              recordDate = data.date.toDate()
-            } else if (data.date instanceof Date) {
-              recordDate = data.date
-            } else if (typeof data.date === 'object' && (data.date as any).seconds) {
-              recordDate = new Date((data.date as any).seconds * 1000)
+            if (record.date instanceof Timestamp) {
+              recordDate = record.date.toDate()
+            } else if (record.date instanceof Date) {
+              recordDate = record.date
+            } else if (typeof record.date === 'object' && (record.date as any).seconds) {
+              recordDate = new Date((record.date as any).seconds * 1000)
             } else {
               return false
             }
@@ -257,7 +259,7 @@ const Dashboard = () => {
             return recordDate.getTime() === today.getTime()
           })
 
-          const todayAttendance = todayRecord ? (todayRecord.data() as Attendance) : null
+          const todayAttendance = todayRecord ? (todayRecord as Attendance) : null
 
           // Determine status
           const attendanceStatus = todayAttendance?.attendance_status ?? false
@@ -314,54 +316,55 @@ const Dashboard = () => {
         return
       }
 
-      // Step 1: Fetch all students (children) where guardian matches current user
+      // Step 1: Fetch all students (children) where guardian matches current user using cache
       const userRef = doc(db, 'users', currentUser.uid)
-      const studentsQuery = query(
-        collection(db, 'students'),
-        where('guardian', '==', userRef)
+      const studentsData = await queryWithCache(
+        'students',
+        [where('guardian', '==', userRef)],
+        `students:guardian:${currentUser.uid}`,
+        { useCache: true }
       )
-      const studentsSnapshot = await getDocs(studentsQuery)
 
-      if (studentsSnapshot.empty) {
+      if (studentsData.length === 0) {
         console.log('ℹ️ No children found for this parent')
         setChildrenAttendance([])
         return
       }
 
-      // Step 2: For each student, fetch their weekly attendance
+      // Step 2: For each student, fetch their weekly attendance using cache
       const childrenData: ChildAttendanceData[] = await Promise.all(
-        studentsSnapshot.docs.map(async (studentDoc) => {
-          const studentData = studentDoc.data() as Student
-          const childId = studentDoc.id
-          const childName = studentData.name
+        studentsData.map(async (student) => {
+          const childId = student.id
+          const childName = student.name
+          const studentRef = doc(db, 'students', childId)
 
-          // Fetch attendance records for this student
-          const attendanceQuery = query(
-            collection(db, 'attendance'),
-            where('student_ref', '==', studentDoc.ref)
+          // Fetch attendance records for this student using cache
+          const attendanceData = await queryWithCache(
+            'attendance',
+            [where('student_ref', '==', studentRef)],
+            `attendance:student:${childId}`,
+            { useCache: true }
           )
-          const attendanceSnapshot = await getDocs(attendanceQuery)
 
           // Convert to AttendanceRecord format (ProgressCard will handle week filtering)
-          const attendanceRecords = attendanceSnapshot.docs
-            .map((doc) => {
-              const data = doc.data() as Attendance
+          const attendanceRecords = attendanceData
+            .map((record) => {
               let date: Date
 
               // Handle Firestore Timestamp conversion
-              if (data.date instanceof Timestamp) {
-                date = data.date.toDate()
-              } else if (data.date instanceof Date) {
-                date = data.date
-              } else if (typeof data.date === 'object' && (data.date as any).seconds) {
-                date = new Date((data.date as any).seconds * 1000)
+              if (record.date instanceof Timestamp) {
+                date = record.date.toDate()
+              } else if (record.date instanceof Date) {
+                date = record.date
+              } else if (typeof record.date === 'object' && (record.date as any).seconds) {
+                date = new Date((record.date as any).seconds * 1000)
               } else {
                 return null
               }
 
               return {
                 date,
-                present: data.attendance_status,
+                present: record.attendance_status,
               }
             })
             .filter((record): record is { date: Date; present: boolean } => record !== null)
@@ -401,11 +404,11 @@ const Dashboard = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-        <Header onAvatarPress={handleAvatarPress} />
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+      <Header onAvatarPress={handleAvatarPress} />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.welcomeText}>Welcome back, Erin!</Text>
         <Text style={styles.dashboardTitle}>Dashboard</Text>
 
@@ -525,7 +528,7 @@ const Dashboard = () => {
           backgroundColor='#E3F2FD'
           onPress={() => navigation.navigate('News')}
         />
-        </ScrollView>
+      </ScrollView>
     </SafeAreaView>
   )
 }
@@ -680,4 +683,4 @@ const styles = StyleSheet.create({
   },
 })
 
-export {Dashboard}
+export { Dashboard }

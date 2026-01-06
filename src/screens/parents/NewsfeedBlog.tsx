@@ -9,7 +9,7 @@ import { RouteProp, useRoute } from '@react-navigation/native'
 import { MainNavigatorParamList } from '../../navigation/type'
 import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { getDataById, createData, updateData, deleteData } from '../../firebase/firestore'
+import { getDataByIdWithCache, createDataWithCache, updateDataWithCache, deleteDataWithCache } from '../../firebase/firestoreWithCache'
 import { Announcement } from '../../types/Announcement'
 import { DocumentReference, getDoc, Timestamp, collection, query, where, getDocs, orderBy, doc } from 'firebase/firestore'
 import { Users } from '../../types/Users'
@@ -241,7 +241,7 @@ const NewsfeedBlog = () => {
         console.log('🔍 Fetching announcement with ID:', announcementId)
 
         // Try to fetch from Firestore
-        const firestoreData = await getDataById<Announcement>('announcements', announcementId)
+        const firestoreData = await getDataByIdWithCache<Announcement>('announcements', announcementId, { useCache: true })
 
         if (firestoreData) {
           // Fetch author name
@@ -463,8 +463,8 @@ const NewsfeedBlog = () => {
         updated_at: new Date()
       }
 
-      const questionId = await createData('questions', questionData)
-      console.log('✅ Question submitted with ID:', questionId)
+      const questionRef = await createDataWithCache('questions', questionData)
+      console.log('✅ Question submitted with ID:', questionRef.id)
 
       // Refresh Q&A data
       const updatedQnA = await fetchQnA(announcement.id)
@@ -510,7 +510,7 @@ const NewsfeedBlog = () => {
 
     try {
       setIsEditingQuestion(true)
-      await updateData('questions', editingQuestionId, {
+      await updateDataWithCache('questions', editingQuestionId, {
         message: editedQuestionText,
         updated_at: new Date()
       })
@@ -554,10 +554,10 @@ const NewsfeedBlog = () => {
         where('question_ref', '==', doc(db, 'questions', deletingQuestionId))
       )
       const answersSnapshot = await getDocs(answersQuery)
-      await Promise.all(answersSnapshot.docs.map(doc => deleteData('answers', doc.id)))
+      await Promise.all(answersSnapshot.docs.map(doc => deleteDataWithCache('answers', doc.id)))
 
       // Delete the question
-      await deleteData('questions', deletingQuestionId)
+      await deleteDataWithCache('questions', deletingQuestionId)
 
       // Refresh Q&A
       const updatedQnA = await fetchQnA(announcement.id)

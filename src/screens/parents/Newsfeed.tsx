@@ -9,7 +9,7 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
-import { getAllData } from '../../firebase/firestore'
+import { getAllDataWithCache } from '../../firebase/firestoreWithCache'
 import { Announcement } from '../../types/Announcement'
 import { DocumentReference, getDoc, Timestamp } from 'firebase/firestore'
 import { Users } from '../../types/Users'
@@ -32,7 +32,7 @@ const Newsfeed = () => {
   const fetchAnnouncements = async () => {
     try {
       setLoading(true)
-      const data = await getAllData<Announcement>('announcements')
+      const data = await getAllDataWithCache<Announcement>('announcements', { useCache: true })
 
       // Filter announcements to only show those within the last 2 weeks
       const recentAnnouncements = data.filter((announcement) => {
@@ -103,7 +103,7 @@ const Newsfeed = () => {
 
   return (
     <SafeAreaView>
-      <Header onAvatarPress={handleAvatarPress}/>
+      <Header onAvatarPress={handleAvatarPress} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}

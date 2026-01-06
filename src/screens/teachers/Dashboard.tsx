@@ -10,7 +10,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import { useNavigation } from '@react-navigation/native'
 import { db } from '../../firebase'
-import { collection, query, where, getDocs, Timestamp, doc } from 'firebase/firestore'
+import { Timestamp, doc, where } from 'firebase/firestore'
+import { getAllDataWithCache, queryWithCache, updateDataWithCache, createDataWithCache } from '../../firebase/firestoreWithCache'
 import type { Attendance } from '../../types/Attendance'
 
 type DashboardNavigationProp = NativeStackNavigationProp<MainNavigatorParamList, 'ParentTabNavigator'>
@@ -43,28 +44,26 @@ const DashboardContent = () => {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  // Fetch students from Firestore
+  // Fetch students from Firestore using cache
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        // Fetch all students from the students collection
-        const studentsQuery = query(collection(db, 'students'))
-        const studentsSnapshot = await getDocs(studentsQuery)
+        // Fetch all students using cache
+        const studentsData = await getAllDataWithCache('students', { useCache: true })
 
-        const studentsData: StudentData[] = studentsSnapshot.docs.map(doc => {
-          const data = doc.data()
+        const students: StudentData[] = studentsData.map(student => {
           // TODO: Add registration date field to Student type
           // For now, use a default date (beginning of school year)
           const defaultDate = new Date('2025-01-01')
 
           return {
-            id: doc.id,
-            name: data.name || 'Unknown Student',
+            id: student.id,
+            name: student.name || 'Unknown Student',
             dateRegistered: defaultDate
           }
         })
 
-        setStudents(studentsData)
+        setStudents(students)
       } catch (error) {
         console.error('Error fetching students:', error)
       } finally {
@@ -75,7 +74,7 @@ const DashboardContent = () => {
     fetchStudents()
   }, [])
 
-  // Fetch attendance records for selected date
+  // Fetch attendance records for selected date using cache
   useEffect(() => {
     const fetchAttendance = async () => {
       try {
@@ -85,16 +84,17 @@ const DashboardContent = () => {
         const nextDay = new Date(selectedDateOnly)
         nextDay.setDate(nextDay.getDate() + 1)
 
-        const attendanceQuery = query(
-          collection(db, 'attendance'),
-          where('date', '>=', Timestamp.fromDate(selectedDateOnly)),
-          where('date', '<', Timestamp.fromDate(nextDay))
+        const attendanceData = await queryWithCache(
+          'attendance',
+          [
+            where('date', '>=', Timestamp.fromDate(selectedDateOnly)),
+            where('date', '<', Timestamp.fromDate(nextDay))
+          ],
+          `attendance:date:${selectedDateOnly.toISOString()}`,
+          { useCache: true }
         )
 
-        const attendanceSnapshot = await getDocs(attendanceQuery)
-
-        const attendanceData: AttendanceRecord[] = attendanceSnapshot.docs.map(doc => {
-          const data = doc.data() as Attendance
+        const attendanceRecords: AttendanceRecord[] = attendanceData.map(data => {
           // Extract student ID from student_ref DocumentReference
           const studentId = data.student_ref?.id || ''
 
@@ -108,7 +108,7 @@ const DashboardContent = () => {
           }
         })
 
-        setAttendanceRecords(attendanceData)
+        setAttendanceRecords(attendanceRecords)
       } catch (error) {
         console.error('Error fetching attendance:', error)
       }
@@ -139,50 +139,49 @@ const DashboardContent = () => {
       const existingRecord = attendanceRecords.find(r => r.studentId === studentId)
 
       if (existingRecord) {
-        // Update existing record
-        const attendanceQuery = query(
-          collection(db, 'attendance'),
-          where('date', '>=', Timestamp.fromDate(selectedDateOnly)),
-          where('date', '<', Timestamp.fromDate(new Date(selectedDateOnly.getTime() + 86400000)))
+        // Update existing record using cache
+        const attendanceData = await queryWithCache(
+          'attendance',
+          [
+            where('date', '>=', Timestamp.fromDate(selectedDateOnly)),
+            where('date', '<', Timestamp.fromDate(new Date(selectedDateOnly.getTime() + 86400000)))
+          ],
+          `attendance:date:${selectedDateOnly.toISOString()}`,
+          { useCache: true, forceRefresh: true }
         )
-        const snapshot = await getDocs(attendanceQuery)
-        const docToUpdate = snapshot.docs.find(doc => {
-          const data = doc.data() as Attendance
-          return data.student_ref?.id === studentId
-        })
+        const docToUpdate = attendanceData.find(data => data.student_ref?.id === studentId)
 
         if (docToUpdate) {
-          const { updateData } = await import('../../firebase/firestore')
-          await updateData('attendance', docToUpdate.id, {
+          await updateDataWithCache('attendance', docToUpdate.id, {
             attendance_status: newStatus
           })
         }
       } else {
-        // Create new attendance record
-        const { createData } = await import('../../firebase/firestore')
+        // Create new attendance record using cache
         const studentRef = doc(db, 'students', studentId)
 
-        await createData('attendance', {
+        await createDataWithCache('attendance', {
           date: Timestamp.fromDate(selectedDateOnly),
           attendance_status: newStatus,
           student_ref: studentRef
         })
       }
 
-      // Refresh attendance data
+      // Refresh attendance data using cache
       const nextDay = new Date(selectedDateOnly)
       nextDay.setDate(nextDay.getDate() + 1)
 
-      const attendanceQuery = query(
-        collection(db, 'attendance'),
-        where('date', '>=', Timestamp.fromDate(selectedDateOnly)),
-        where('date', '<', Timestamp.fromDate(nextDay))
+      const refreshedData = await queryWithCache(
+        'attendance',
+        [
+          where('date', '>=', Timestamp.fromDate(selectedDateOnly)),
+          where('date', '<', Timestamp.fromDate(nextDay))
+        ],
+        `attendance:date:${selectedDateOnly.toISOString()}`,
+        { useCache: true, forceRefresh: true }
       )
 
-      const attendanceSnapshot = await getDocs(attendanceQuery)
-
-      const attendanceData: AttendanceRecord[] = attendanceSnapshot.docs.map(doc => {
-        const data = doc.data() as Attendance
+      const attendanceData: AttendanceRecord[] = refreshedData.map(data => {
         const studentId = data.student_ref?.id || ''
 
         return {

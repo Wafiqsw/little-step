@@ -8,7 +8,7 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
-import { getAllData, deleteData } from '../../firebase/firestore'
+import { getAllDataWithCache, deleteDataWithCache } from '../../firebase/firestoreWithCache'
 import { auth } from '../../firebase/index'
 import { Announcement } from '../../types/Announcement'
 import { DocumentReference, getDoc, Timestamp } from 'firebase/firestore'
@@ -31,7 +31,7 @@ const Newsfeed = () => {
   const fetchAnnouncements = async () => {
     try {
       setLoading(true)
-      const data = await getAllData<Announcement>('announcements')
+      const data = await getAllDataWithCache<Announcement>('announcements', { useCache: true })
 
       // Filter announcements to only show those within the last 2 weeks
       const recentAnnouncements = data.filter((announcement) => {
@@ -130,7 +130,7 @@ const Newsfeed = () => {
       try {
         setDeleting(true)
         console.log('🗑️ Deleting announcement:', postToDelete)
-        await deleteData('announcements', postToDelete)
+        await deleteDataWithCache('announcements', postToDelete)
         console.log('✅ Announcement deleted successfully')
 
         // Refresh announcements list

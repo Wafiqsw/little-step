@@ -14,7 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { MainNavigatorParamList } from '../../navigation/type'
 import { getNewsById } from '../../data/MockNews'
 import Icon from 'react-native-vector-icons/FontAwesome'
-import { createData, updateData, getDataById } from '../../firebase/firestore'
+import { createDataWithCache, updateDataWithCache, getDataByIdWithCache } from '../../firebase/firestoreWithCache'
 import { auth } from '../../firebase/index'
 import { doc } from 'firebase/firestore'
 import { db } from '../../firebase/index'
@@ -69,14 +69,14 @@ const CreateFeed = () => {
           console.log('🔍 Loading announcement for edit with ID:', announcementId)
 
           // First try to load from Firestore
-          const announcement = await getDataById<Announcement>('announcements', announcementId)
-          if (announcement) {
+          const announcementData = await getDataByIdWithCache<Announcement>('announcements', announcementId, { useCache: true })
+          if (announcementData) {
             setFormData({
-              tag: announcement.tag,
-              heading: announcement.heading,
-              subheading: announcement.subheading,
-              title: announcement.title,
-              description: announcement.content,
+              tag: announcementData.tag,
+              heading: announcementData.heading,
+              subheading: announcementData.subheading,
+              title: announcementData.title,
+              description: announcementData.content,
             })
           } else {
             // Fallback to mock data if not found in Firestore
@@ -177,7 +177,7 @@ const CreateFeed = () => {
         }
 
         const announcementId = typeof newsId === 'string' ? newsId : newsId!.toString()
-        await updateData('announcements', announcementId, updatePayload)
+        await updateDataWithCache('announcements', announcementId, updatePayload)
         console.log('✅ Announcement updated successfully with ID:', announcementId)
       } else {
         // Create new announcement
@@ -195,7 +195,7 @@ const CreateFeed = () => {
           updated_at: new Date(),
         }
 
-        const docRef = await createData('announcements', createPayload)
+        const docRef = await createDataWithCache('announcements', createPayload)
         console.log('✅ Announcement created successfully with ID:', docRef.id)
       }
 
@@ -446,8 +446,8 @@ const CreateFeed = () => {
                   ? 'Updating...'
                   : 'Publishing...'
                 : isEditMode
-                ? 'Update Article'
-                : 'Publish Article'
+                  ? 'Update Article'
+                  : 'Publish Article'
             }
             onPress={handlePublish}
             variant="primary"
