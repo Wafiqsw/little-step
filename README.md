@@ -1,97 +1,86 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# LittleStep: Kindergarten Pickup & Attendance Tracker
 
-# Getting Started
+A React Native mobile application that streamlines kindergarten pickup processes and attendance tracking, connecting parents and teachers for safer and more efficient child management.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## 📱 Project Overview
 
-## Step 1: Start Metro
+**LittleStep** simplifies the daily kindergarten pickup routine by providing real-time communication between parents and teachers. The app eliminates waiting time, reduces confusion, and ensures secure child handovers through an intuitive swipe-based interface.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## ✨ Key Features
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+### For Parents
 
-```sh
-# Using npm
-npm start
+- **Swipe to Notify** - Simple swipe gesture to notify teachers when arriving for pickup
+- **Real-time Updates** - Instant notification to teachers when en route
+- **Confirm Pickup** - Slide to confirm successful child pickup
+- **Authorized Guardian (Wakil) Registration** - Register authorized guardians who can pick up the child
+- **Pickup History** - Track pickup times and patterns
+- **Multiple Children Support** - Manage pickups for multiple kids in one app
+- **Attendance Overview** - View child's attendance records and history
 
-# OR using Yarn
-yarn start
-```
+### For Teachers
 
-## Step 2: Build and run your app
+- **Pickup Alerts** - Receive instant notifications when parents are arriving
+- **Child Preparation** - Time to prepare the child before parent arrival
+- **Authorized Pickup List** - Access to registered guardians (wakil) for each child
+- **Attendance Management** - Mark daily attendance with timestamp
+- **Quick Access Dashboard** - View all incoming pickups at a glance
+- **Parent Contact** - Easy access to parent and guardian information
+- **Daily Reports** - Generate attendance and pickup reports
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+### Core Functionality
 
-### Android
+- **Real-time Notifications** - Instant push notifications between parents and teachers
+- **Swipe Interface** - Intuitive gesture-based interactions
+- **Attendance Tracking** - Automated check-in and check-out logging
+- **Authorized Guardian Management** - Parent-controlled list of approved pickup persons
+- **Secure Handover** - Confirmation system with authorized person verification
 
-```sh
-# Using npm
-npm run android
+## 🛠️ Technical Stack
 
-# OR using Yarn
-yarn android
-```
+- **Framework**: React Native (cross-platform iOS & Android)
+- **Backend & Database**: Firebase
+    - Firebase Authentication for user management
+    - Firebase Realtime Database for live data synchronization
+    - Firebase Cloud Messaging for push notifications
+- **UI/UX**: Gesture-based swipe interactions
 
-### iOS
+## 🎯 Problem Solved
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+LittleStep addresses common challenges in kindergarten pickup processes:
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+- **Reduced Waiting Time** - Teachers can prepare children in advance
+- **Improved Communication** - Real-time updates between parents and teachers
+- **Enhanced Safety** - Verified pickup confirmation system
+- **Attendance Accuracy** - Automated tracking eliminates manual errors
+- **Operational Efficiency** - Streamlined pickup flow reduces bottlenecks
 
-```sh
-bundle install
-```
+## 💡 Key Achievements
 
-Then, and every time you update your native dependencies, run:
+- Developed intuitive swipe-based notification system for seamless user experience
+- Implemented real-time bidirectional communication between parent and teacher accounts
+- Built automated attendance tracking with timestamp logging
+- Created role-based access control for parents and teachers
+- Designed gesture-driven interface optimized for quick interactions
 
-```sh
-bundle exec pod install
-```
+## 🎯 Technical Highlights
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+This project demonstrates:
 
-```sh
-# Using npm
-npm run ios
+- Mobile app development with React Native
+- Real-time data synchronization using Firebase
+- Push notification implementation for instant alerts
+- Gesture-based UI/UX design patterns
+- Multi-role user management system
+- Cross-platform mobile deployment
+- Database design for attendance and pickup tracking
 
-# OR using Yarn
-yarn ios
-```
+## 📧 Contact
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+**Wafiq Misman**
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+[wafiqmisman06@gmail.com](mailto:wafiqmisman06@gmail.com)
 
-## Step 3: Modify your app
+---
 
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+*Making kindergarten pickups safer and simpler, one swipe at a time* 👶
