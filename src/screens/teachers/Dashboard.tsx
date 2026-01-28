@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native'
 import React, { useMemo, useState, useEffect } from 'react'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, DateCard, AttendanceSummaryCard, AttendanceCard } from '../../components'
 import { SelectedDateProvider, useSelectedDate } from '../../hooks'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
@@ -295,7 +294,7 @@ const DashboardContent = () => {
   const absentCount = studentsWithAttendance.filter(s => s.status === 'absent').length
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header onAvatarPress={handleAvatarPress} />
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -349,7 +348,7 @@ const DashboardContent = () => {
           </View>
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   )
 }
 

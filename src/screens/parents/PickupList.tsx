@@ -1,6 +1,5 @@
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
 import React, { useState, useCallback } from 'react'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, GuardianCard, Button, SuccessModal, ConfirmationModal } from '../../components'
 import { Spacing, Typography, Colors } from '../../constants'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -169,7 +168,7 @@ const PickupList = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header onAvatarPress={handleAvatarPress} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -314,7 +313,7 @@ const PickupList = () => {
         iconName="trash"
         iconColor={Colors.error.main}
       />
-    </SafeAreaView>
+    </View>
   )
 }
 

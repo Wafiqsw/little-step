@@ -1,6 +1,5 @@
 import { ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native'
 import React, { useState, useEffect } from 'react'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, Slider, ProgressCard, NavigationCard, ChildAttendanceData } from '../../components'
 import { Typography, Colors, Spacing } from '../../constants'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
@@ -403,7 +402,7 @@ const Dashboard = () => {
 
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header onAvatarPress={handleAvatarPress} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -529,7 +528,7 @@ const Dashboard = () => {
           onPress={() => navigation.navigate('News')}
         />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }
 

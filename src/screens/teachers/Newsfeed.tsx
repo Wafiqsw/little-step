@@ -1,6 +1,5 @@
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native'
 import React, { useState } from 'react'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, NewsCard, Button, TeacherNewsCard, ConfirmationModal } from '../../components'
 import { Spacing, Typography, Colors } from '../../constants'
 import Icon from 'react-native-vector-icons/FontAwesome'
@@ -170,7 +169,7 @@ const Newsfeed = () => {
   const displayedAllPosts = allPosts.slice(0, 2) // Show only first 2
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header onAvatarPress={handleAvatarPress} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -280,7 +279,7 @@ const Newsfeed = () => {
         iconName="trash"
         iconColor="#F44336"
       />
-    </SafeAreaView>
+    </View>
   )
 }
 

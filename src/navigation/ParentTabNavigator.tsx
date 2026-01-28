@@ -1,14 +1,17 @@
 import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/FontAwesome'
 import { ParentDashboard, ParentNewsfeed, ParentPickupList } from '../screens'
 import { ParentTabNavigatorParamList } from './type'
+import { Colors } from '../constants'
 
 
 const Tab = createBottomTabNavigator<ParentTabNavigatorParamList>()
 
 export const ParentTabNavigator = () => {
   return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.white }} edges={['top', 'bottom']}>
       <Tab.Navigator
         initialRouteName="Home"
         screenOptions={{
@@ -19,6 +22,7 @@ export const ParentTabNavigator = () => {
             paddingBottom: 5,
             paddingTop: 5,
             height: 60,
+            backgroundColor: Colors.white,
           },
           tabBarShowLabel: false,
         }}
@@ -51,5 +55,6 @@ export const ParentTabNavigator = () => {
           }}
         />
       </Tab.Navigator>
+    </SafeAreaView>
   )
 }

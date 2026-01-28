@@ -1,6 +1,5 @@
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
 import React, { useState } from 'react'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, NewsCard } from '../../components'
 import { Spacing, Typography, Colors } from '../../constants'
 import { mockNewsData } from '../../data/MockNews'
@@ -102,7 +101,7 @@ const Newsfeed = () => {
   })
 
   return (
-    <SafeAreaView>
+    <View style={styles.container}>
       <Header onAvatarPress={handleAvatarPress} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -142,11 +141,15 @@ const Newsfeed = () => {
         )}
 
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.white,
+  },
   scrollContent: {
     padding: 16,
     gap: Spacing.md,

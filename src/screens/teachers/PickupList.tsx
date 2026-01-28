@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native'
 import React, { useState, useEffect, useCallback } from 'react'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { Header, PickupCard } from '../../components'
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
@@ -120,18 +119,18 @@ const PickupList = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <Header onAvatarPress={handleAvatarPress} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary[600]} />
           <Text style={styles.loadingText}>Loading pickup list...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     )
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header onAvatarPress={handleAvatarPress} />
       <ScrollView
         style={styles.scrollView}
@@ -201,7 +200,7 @@ const PickupList = () => {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }
 
